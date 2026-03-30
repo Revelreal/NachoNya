@@ -69,7 +69,7 @@ class SystemInfoService implements IService {
   readonly version = '1.0.0';
 
   private cache: Map<string, { data: unknown; timestamp: number }> = new Map();
-  private readonly CACHE_TTL = 2000; // 2秒缓存
+  private readonly CACHE_TTL = 10000; // 10秒缓存，减少频繁调用
 
   async getInfo(): Promise<IServiceResponse<ServiceInfo>> {
     return {
@@ -118,9 +118,10 @@ class SystemInfoService implements IService {
     const cached = this.getCache('cpu');
     if (cached) return cached as CpuInfo;
 
-    const [load, cpuData] = await Promise.all([
+    const [load, cpuData, cpuTemp] = await Promise.all([
       si.currentLoad(),
       si.cpu(),
+      this.getCpuTemperature(),  // 并行获取温度
     ]);
 
     const result: CpuInfo = {
@@ -130,7 +131,7 @@ class SystemInfoService implements IService {
       cores: cpuData.cores,
       physicalCores: cpuData.physicalCores,
       usage: load.currentLoad,
-      temperature: await this.getCpuTemperature(),
+      temperature: cpuTemp,
     };
 
     this.setCache('cpu', result);
@@ -138,20 +139,43 @@ class SystemInfoService implements IService {
   }
 
   private async getCpuTemperature(): Promise<number | undefined> {
+    // 方案1: 尝试 MSAcpi_ThermalZoneTemperature (最常用)
+    const temp = await this.getCpuTempViaMsAcpi();
+    if (temp !== undefined) return temp;
+
+    // 方案2: 尝试注册表 (部分 OEM 电脑有效)
+    const temp2 = await this.getCpuTempViaRegistry();
+    if (temp2 !== undefined) return temp2;
+
+    return undefined;
+  }
+
+  // MSAcpi 方案 (最可靠)
+  private async getCpuTempViaMsAcpi(): Promise<number | undefined> {
     try {
-      // 尝试 WMI 获取温度
       const { stdout } = await execAsync(
-        'powershell -Command "Get-WmiObject MSAcpi_ThermalZoneTemperature -Namespace root/wmi -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty CurrentTemperature"',
-        { timeout: 3000 }
+        'powershell -Command "(Get-WmiObject MSAcpi_ThermalZoneTemperature -Namespace root/wmi -ErrorAction SilentlyContinue | Select-Object -First 1).CurrentTemperature"',
+        { timeout: 800 }  // 降低超时到 800ms
       );
-
       const tempKelvin = parseInt(stdout.trim(), 10);
-      if (isNaN(tempKelvin)) return undefined;
-
-      // WMI 返回十分之一开尔文
-      return (tempKelvin / 10) - 273.15;
+      if (isNaN(tempKelvin) || tempKelvin <= 0 || tempKelvin > 500) return undefined;
+      return Math.round((tempKelvin / 10) - 273.15);
     } catch {
-      // 温度获取失败不影响主功能
+      return undefined;
+    }
+  }
+
+  // 注册表方案 (部分 OEM 电脑有效)
+  private async getCpuTempViaRegistry(): Promise<number | undefined> {
+    try {
+      const { stdout } = await execAsync(
+        'powershell -Command "$temp = Get-ItemProperty -Path \'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Thermal\\Zone\\*\' -Name Temperature -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Temperature; if ($temp) { $temp / 10 - 273.15 } else { $null }"',
+        { timeout: 800 }  // 降低超时到 800ms
+      );
+      const temp = parseFloat(stdout.trim());
+      if (isNaN(temp) || temp <= 0 || temp > 150) return undefined;
+      return Math.round(temp);
+    } catch {
       return undefined;
     }
   }
@@ -201,17 +225,71 @@ class SystemInfoService implements IService {
     if (cached) return cached as GpuInfo[];
 
     const data = await si.graphics();
-    const result: GpuInfo[] = data.controllers.map(gpu => ({
-      name: gpu.model || 'Unknown',
-      vendor: gpu.vendor || 'Unknown',
-      memoryTotal: gpu.memoryTotal || 0,
-      memoryUsed: gpu.memoryUsed || 0,
-      utilization: gpu.utilizationGpu || 0,
-      temperature: gpu.temperatureGpu,
-    }));
+    // 并行获取 nvidia-smi 数据
+    const [nvidiaTemps, nvidiaUtilizations] = await Promise.all([
+      this.getNvidiaGpuTemperatures(),
+      this.getNvidiaGpuUtilizations(),
+    ]);
+
+    const result: GpuInfo[] = data.controllers.map((gpu, index) => {
+      const isNvidia = gpu.vendor?.toLowerCase().includes('nvidia') ||
+                       gpu.model?.toLowerCase().includes('nvidia') ||
+                       gpu.model?.toLowerCase().includes('geforce');
+
+      // 优先使用 nvidia-smi 数据，否则用 systeminformation
+      let temperature: number | undefined = gpu.temperatureGpu;
+      let utilization: number = gpu.utilizationGpu ?? 0;
+
+      if (isNvidia) {
+        if (nvidiaTemps[index] !== undefined) {
+          temperature = nvidiaTemps[index];
+        }
+        if (nvidiaUtilizations[index] !== undefined) {
+          utilization = nvidiaUtilizations[index];
+        }
+      }
+
+      return {
+        name: gpu.model || 'Unknown',
+        vendor: gpu.vendor || 'Unknown',
+        memoryTotal: gpu.memoryTotal || 0,
+        memoryUsed: gpu.memoryUsed || 0,
+        utilization,
+        temperature,
+      };
+    });
 
     this.setCache('gpus', result);
     return result;
+  }
+
+  // 通过 nvidia-smi 获取 NVIDIA GPU 温度列表
+  private async getNvidiaGpuTemperatures(): Promise<number[]> {
+    try {
+      const { stdout } = await execAsync(
+        'nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits',
+        { timeout: 1000 }  // 降低超时到 1 秒
+      );
+      // 每行一个温度值
+      const temps = stdout.trim().split('\n').map(t => parseInt(t.trim(), 10));
+      return temps.filter(t => !isNaN(t) && t >= 0 && t <= 120);
+    } catch {
+      return [];
+    }
+  }
+
+  // 通过 nvidia-smi 获取 NVIDIA GPU 利用率列表
+  private async getNvidiaGpuUtilizations(): Promise<number[]> {
+    try {
+      const { stdout } = await execAsync(
+        'nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits',
+        { timeout: 1000 }  // 降低超时到 1 秒
+      );
+      const utils = stdout.trim().split('\n').map(t => parseInt(t.trim(), 10));
+      return utils.filter(t => !isNaN(t) && t >= 0 && t <= 100);
+    } catch {
+      return [];
+    }
   }
 
   // ========== 操作系统信息 ==========
@@ -241,14 +319,19 @@ class SystemInfoService implements IService {
   // ========== 获取全部 ==========
 
   private async getAll(): Promise<SystemInfo> {
+    const start = Date.now();
+    logger.info('[SystemInfoService] getAll started');
+
+    // 并行获取所有数据
     const [cpu, memory, disks, gpus, os] = await Promise.all([
-      this.getCpu(),
-      this.getMemory(),
-      this.getDisks(),
-      this.getGpus(),
-      this.getOsInfo(),
+      this.getCpu().then(r => { logger.info(`[SystemInfoService] getCpu done: ${Date.now() - start}ms`); return r; }),
+      this.getMemory().then(r => { logger.info(`[SystemInfoService] getMemory done: ${Date.now() - start}ms`); return r; }),
+      this.getDisks().then(r => { logger.info(`[SystemInfoService] getDisks done: ${Date.now() - start}ms`); return r; }),
+      this.getGpus().then(r => { logger.info(`[SystemInfoService] getGpus done: ${Date.now() - start}ms`); return r; }),
+      this.getOsInfo().then(r => { logger.info(`[SystemInfoService] getOsInfo done: ${Date.now() - start}ms`); return r; }),
     ]);
 
+    logger.info(`[SystemInfoService] getAll completed in ${Date.now() - start}ms`);
     return { cpu, memory, disks, gpus, os };
   }
 

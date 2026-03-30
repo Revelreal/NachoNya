@@ -7,12 +7,14 @@
   "license": "MIT",
   "scripts": {
     "dev": "electron .",
-    "build": "tsc && electron-builder",
-    "build:win": "tsc && electron-builder --win",
+    "copy-html": "node -e \"const fs=require('fs');const p='dist/renderer';if(!fs.existsSync(p))fs.mkdirSync(p,{recursive:true});fs.copyFileSync('src/renderer/index.html',p+'/index.html')\"",
+    "build": "tsc && npm run copy-html && electron-builder",
+    "build:win": "tsc && npm run copy-html && electron-builder --win",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "electron-store": "^8.2.0",
+    "node-pty": "^1.1.0",
     "systeminformation": "^5.23.5",
     "uuid": "^10.0.0"
   },
@@ -33,7 +35,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     }

@@ -47,6 +47,16 @@ const api = {
   },
 
   /**
+   * 窗口控制
+   */
+  window: {
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+    maximize: () => ipcRenderer.invoke('window:maximize'),
+    close: () => ipcRenderer.invoke('window:close'),
+    isMaximized: (): Promise<boolean> => ipcRenderer.invoke('window:isMaximized'),
+  },
+
+  /**
    * 系统信息服务快捷方法
    */
   system: {
@@ -69,11 +79,38 @@ const api = {
     listPorts: () => api.service.execute('ProcessService', 'listPorts'),
     killPort: (port: number) => api.service.execute('ProcessService', 'killPort', { port }),
   },
+
+  /**
+   * Shell 终端交互
+   */
+  shell: {
+    start: (shellType: 'powershell' | 'cmd' = 'powershell') =>
+      ipcRenderer.invoke('shell:start', shellType),
+    execute: (command: string) =>
+      ipcRenderer.invoke('shell:execute', command),
+    write: (data: string) =>
+      ipcRenderer.invoke('shell:write', data),
+    resize: (cols: number, rows: number) =>
+      ipcRenderer.invoke('shell:resize', cols, rows),
+    stop: () => ipcRenderer.invoke('shell:stop'),
+    onData: (callback: (data: string) => void) => {
+      ipcRenderer.on('shell:data', (_event, data) => callback(data));
+    },
+    onExit: (callback: (exitCode: number) => void) => {
+      ipcRenderer.on('shell:exit', (_event, exitCode) => callback(exitCode));
+    },
+  },
 };
 
 // ========== 暴露 API ==========
 
+// eslint-disable-next-line no-console
+console.log('Preload script loading, contextBridge:', typeof contextBridge !== 'undefined');
+
 contextBridge.exposeInMainWorld('nachoApi', api);
+
+// eslint-disable-next-line no-console
+console.log('nachoApi exposed');
 
 // ========== 类型声明 ==========
 
