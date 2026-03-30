@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NachoNya! - 猫羽雫的 AI 电脑管家</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-dark: #0a0a0a;
+      --bg-darker: #050505;
+      --bg-card: #111111;
+      --bg-card-hover: #161616;
+      --bg-input: #1a1a1a;
+
+      --accent-pink: #ff9a9e;
+      --accent-pink-light: #ffc4c7;
+      --accent-pink-glow: rgba(255,154,158,0.2);
+
+      --text-primary: #ffffff;
+      --text-secondary: #666666;
+      --text-muted: #3a3a3a;
+
+      --border: #1a1a1a;
+      --border-light: #242424;
+
+      --terminal-green: #4ade80;
+      --terminal-blue: #60a5fa;
+      --terminal-red: #f87171;
+      --terminal-yellow: #fbbf24;
+      --terminal-purple: #a78bfa;
+
+      --transition: 0.2s ease;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      font-size: 12px;
+    }
+
+    .app-container {
+      display: grid;
+      grid-template-rows: 36px 1fr 24px;
+      grid-template-columns: 52px 1fr 340px;
+      height: 100vh;
+    }
+
+    /* ========== Title Bar ========== */
+    .titlebar {
+      grid-column: 1 / -1;
+      background: var(--bg-darker);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent-pink);
+      margin-right: 24px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .logo img {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .titlebar-menu {
+      display: flex;
+      gap: 2px;
+      flex: 1;
+    }
+
+    .menu-item {
+      padding: 4px 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .menu-item:hover { color: var(--text-primary); }
+    .menu-item.active {
+      color: var(--text-primary);
+      background: var(--bg-card);
+    }
+
+    .titlebar-right { display: flex; align-items: center; gap: 12px; }
+
+    .cat-avatar-small {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-pink), var(--accent-pink-light));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .cat-avatar-small img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .window-controls { display: flex; gap: 6px; margin-left: 8px; }
+    .window-btn { width: 10px; height: 10px; border-radius: 50%; }
+    .window-btn.minimize { background: #ffbd2e; }
+    .window-btn.maximize { background: #28c840; }
+    .window-btn.close { background: #ff5f57; }
+
+    /* ========== Activity Bar ========== */
+    .activity-bar {
+      background: var(--bg-darker);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 0;
+      border-right: 1px solid var(--border);
+    }
+
+    .activity-icon {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+    }
+
+    .activity-icon svg { width: 18px; height: 18px; stroke: var(--text-secondary); stroke-width: 2; fill: none; }
+    .activity-icon:hover { background: var(--bg-card); }
+    .activity-icon.active { background: var(--bg-card); }
+    .activity-icon.active svg { stroke: var(--accent-pink); }
+    .activity-icon.active::before {
+      content: '';
+      position: absolute;
+      left: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2px;
+      height: 16px;
+      background: var(--accent-pink);
+      border-radius: 0 2px 2px 0;
+    }
+
+    .activity-spacer { flex: 1; }
+
+    /* ========== Main Content ========== */
+    .main-content {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top Row - Cat + Hardware */
+    .top-row {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 12px;
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Cat Section */
+    .cat-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--bg-card);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .cat-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-pink), var(--accent-pink-light));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 0 16px var(--accent-pink-glow);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .cat-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .cat-info h2 {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .cat-info h2 .name {
+      background: linear-gradient(135deg, var(--accent-pink), var(--accent-pink-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .cat-info p {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .cat-chips {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .chip {
+      padding: 3px 8px;
+      background: var(--bg-input);
+      border-radius: 10px;
+      font-size: 10px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .chip .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+    }
+
+    .chip .dot.green { background: var(--terminal-green); }
+    .chip .dot.yellow { background: var(--terminal-yellow); }
+    .chip .dot.blue { background: var(--terminal-blue); }
+
+    /* Hardware Specs */
+    .hardware-section {
+      background: var(--bg-card);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .hardware-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hardware-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .hardware-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .hardware-sub {
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    /* Middle Row - AI Chat + Terminal */
+    .middle-row {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 12px;
+      padding: 0 12px;
+      min-height: 0;
+    }
+
+    /* AI Chat Area */
+    .ai-chat-section {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-card);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .ai-chat-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--bg-darker);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .ai-chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .ai-chat-messages::-webkit-scrollbar { width: 4px; }
+    .ai-chat-messages::-webkit-scrollbar-thumb { background: var(--bg-input); border-radius: 2px; }
+
+    .chat-message {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .chat-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-pink), var(--accent-pink-light));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .chat-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .chat-avatar.user {
+      background: linear-gradient(135deg, #4ecdc4, #7ee8e0);
+    }
+
+    .chat-content {
+      flex: 1;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .chat-content .name {
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .chat-content .name.shizuku { color: var(--accent-pink); }
+    .chat-content .name.user { color: var(--terminal-blue); }
+
+    .chat-content .text {
+      color: var(--text-secondary);
+    }
+
+    .chat-input-area {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      background: var(--bg-input);
+      gap: 8px;
+    }
+
+    .chat-input-area input {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text-primary);
+      font-size: 12px;
+      outline: none;
+    }
+
+    .chat-input-area input:focus {
+      border-color: var(--accent-pink);
+    }
+
+    .chat-send-btn {
+      padding: 8px 16px;
+      background: linear-gradient(135deg, var(--accent-pink), var(--accent-pink-light));
+      border: none;
+      border-radius: 8px;
+      color: #0a0a0a;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Manual Terminal */
+    .manual-terminal {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-card);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .terminal-tabs-row {
+      display: flex;
+      background: var(--bg-darker);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .terminal-tab-btn {
+      padding: 8px 16px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .terminal-tab-btn svg { stroke: var(--text-secondary); stroke-width: 2; fill: none; width: 12px; height: 12px; }
+    .terminal-tab-btn:hover { color: var(--text-primary); }
+    .terminal-tab-btn.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--accent-pink);
+    }
+
+    .terminal-output {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      min-height: 0;
+    }
+
+    .terminal-output::-webkit-scrollbar { width: 4px; }
+    .terminal-output::-webkit-scrollbar-thumb { background: var(--bg-input); border-radius: 2px; }
+
+    .terminal-line { margin-bottom: 2px; }
+    .terminal-line .prompt { color: var(--terminal-green); }
+    .terminal-line .path { color: var(--terminal-blue); }
+    .terminal-line .output { color: var(--text-secondary); }
+    .terminal-line .error { color: var(--terminal-red); }
+
+    .terminal-input-row {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--bg-input);
+      gap: 6px;
+    }
+
+    .terminal-input-row span {
+      color: var(--terminal-green);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+
+    .terminal-input-row input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      outline: none;
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-darker);
+    }
+
+    .panel-title {
+      font-size: 12px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-title .icon { display: flex; }
+    .panel-title .icon svg { stroke: var(--text-secondary); stroke-width: 2; fill: none; }
+    .stat-icon svg { stroke: white; stroke-width: 2; fill: none; }
+
+    .panel-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .panel-btn {
+      padding: 3px 8px;
+      font-size: 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .panel-btn:hover {
+      color: var(--text-primary);
+      border-color: var(--accent-pink);
+    }
+
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .panel-body::-webkit-scrollbar { width: 4px; }
+    .panel-body::-webkit-scrollbar-thumb { background: var(--bg-input); border-radius: 2px; }
+
+    /* Live Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat-card {
+      background: var(--bg-input);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .stat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .stat-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stat-icon.cpu { background: linear-gradient(135deg, #ff6b6b, #ff8e8e); }
+    .stat-icon.gpu { background: linear-gradient(135deg, #a78bfa, #c4b5fd); }
+    .stat-icon.ram { background: linear-gradient(135deg, #4ecdc4, #7ee8e0); }
+    .stat-icon.disk { background: linear-gradient(135deg, #fbbf24, #fcd34d); }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .stat-bar {
+      height: 4px;
+      background: var(--bg-dark);
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .stat-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    .stat-card.cpu .stat-bar-fill { background: linear-gradient(90deg, #ff6b6b, #ff8e8e); }
+    .stat-card.gpu .stat-bar-fill { background: linear-gradient(90deg, #a78bfa, #c4b5fd); }
+    .stat-card.ram .stat-bar-fill { background: linear-gradient(90deg, #4ecdc4, #7ee8e0); }
+    .stat-card.disk .stat-bar-fill { background: linear-gradient(90deg, #fbbf24, #fcd34d); }
+
+    /* Process List */
+    .process-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .process-table th {
+      text-align: left;
+      padding: 6px 10px;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .process-table td {
+      padding: 6px 10px;
+      font-size: 11px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .process-name {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .process-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: var(--bg-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .process-icon svg { stroke: var(--text-secondary); stroke-width: 2; fill: none; width: 12px; height: 12px; }
+
+    .process-memory {
+      color: var(--terminal-blue);
+    }
+
+    .process-cpu {
+      color: var(--terminal-yellow);
+    }
+
+    .process-status {
+      color: var(--terminal-green);
+    }
+
+    /* Bottom Row - Tabs Section */
+    .bottom-row {
+      height: 200px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      padding: 0 12px 12px;
+    }
+
+    /* Network Ports */
+    .port-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .port-table th {
+      text-align: left;
+      padding: 5px 8px;
+      font-size: 10px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .port-table td {
+      padding: 5px 8px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .port-num { color: var(--terminal-blue); }
+    .port-proto { color: var(--text-muted); }
+    .port-process { color: var(--text-secondary); }
+
+    /* Env Variables */
+    .env-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .env-item {
+      display: flex;
+      gap: 8px;
+      padding: 4px 8px;
+      background: var(--bg-input);
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+    }
+
+    .env-key { color: var(--terminal-green); }
+    .env-value { color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ========== Right Panel ========== */
+    .right-panel {
+      background: var(--bg-darker);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .right-section {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .right-section:last-child { border-bottom: none; flex: 1; overflow-y: auto; }
+    .right-section::-webkit-scrollbar { width: 4px; }
+    .right-section::-webkit-scrollbar-thumb { background: var(--bg-card); border-radius: 2px; }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .section-title svg { stroke: var(--text-secondary); stroke-width: 2; fill: none; width: 12px; height: 12px; }
+
+    /* Action Buttons */
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--bg-card);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition);
+      border: 1px solid transparent;
+    }
+
+    .action-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent-pink);
+    }
+
+    .action-btn-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .action-btn-icon svg { stroke: white; stroke-width: 2; fill: none; width: 14px; height: 14px; }
+
+    .action-btn-icon.pink { background: linear-gradient(135deg, var(--accent-pink), var(--accent-pink-light)); }
+    .action-btn-icon.cyan { background: linear-gradient(135deg, #4ecdc4, #7ee8e0); }
+    .action-btn-icon.yellow { background: linear-gradient(135deg, #fbbf24, #fcd34d); }
+    .action-btn-icon.yellow svg { stroke: #333; }
+
+    .action-btn-text h4 { font-size: 11px; font-weight: 500; }
+    .action-btn-text p { font-size: 9px; color: var(--text-muted); }
+
+    /* Quick Actions in Terminal */
+    .quick-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .quick-action {
+      padding: 4px 10px;
+      background: var(--bg-input);
+      border-radius: 12px;
+      font-size: 10px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .quick-action:hover {
+      background: var(--accent-pink);
+      color: #0a0a0a;
+    }
+
+    /* ========== Status Bar ========== */
+    .statusbar {
+      grid-column: 1 / -1;
+      background: linear-gradient(90deg, var(--accent-pink), var(--accent-pink-light), var(--accent-pink));
+      color: #0a0a0a;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 -2px 20px rgba(255,154,158,0.3);
+    }
+
+    .statusbar-item {
+      padding: 0 10px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .statusbar-item svg { stroke: #0a0a0a; stroke-width: 2; fill: none; width: 10px; height: 10px; }
+
+    .statusbar-right { margin-left: auto; display: flex; }
+    .statusbar .time { font-weight: 600; }
+
+    .statusbar-avatar {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Title Bar -->
+    <div class="titlebar">
+      <div class="logo"><img src="./assets/images/shizuku.png" alt="shizuku" /> NachoNya!</div>
+      <div class="titlebar-menu">
+        <div class="menu-item active">仪表盘</div>
+        <div class="menu-item">进程</div>
+        <div class="menu-item">端口</div>
+        <div class="menu-item">环境变量</div>
+        <div class="menu-item">工具</div>
+      </div>
+      <div class="titlebar-right">
+        <div class="cat-avatar-small"><img src="./assets/images/shizuku.png" alt="shizuku" /></div>
+        <div class="window-controls">
+          <div class="window-btn minimize"></div>
+          <div class="window-btn maximize"></div>
+          <div class="window-btn close"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Bar -->
+    <div class="activity-bar">
+      <div class="activity-icon active">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      </div>
+      <div class="activity-icon">
+        <svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/></svg>
+      </div>
+      <div class="activity-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </div>
+      <div class="activity-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </div>
+      <div class="activity-icon">
+        <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      </div>
+      <div class="activity-spacer"></div>
+      <div class="activity-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect x="8" y="8" width="8" height="8" rx="1"/><path d="M12 8a4 4 0 0 0 4 4"/><path d="M12 8a4 4 0 0 1-4 4"/><path d="M12 16v4"/><path d="M8 16h8"/></svg>
+      </div>
+      <div class="activity-icon"><img src="./assets/images/shizuku.png" alt="shizuku" style="width:20px;height:20px;border-radius:50%;object-fit:cover;" /></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Top Row -->
+      <div class="top-row">
+        <!-- Cat Section -->
+        <div class="cat-section">
+          <div class="cat-avatar"><img src="./assets/images/shizuku.png" alt="shizuku" /></div>
+          <div class="cat-info">
+            <h2><span class="name">雫</span> 的电脑管家</h2>
+            <p>Windows 11 家庭中文版</p>
+            <div class="cat-chips">
+              <span class="chip"><span class="dot green"></span>守护中</span>
+              <span class="chip"><span class="dot blue"></span>MCP 已连接</span>
+              <span class="chip"><span class="dot yellow"></span>AI 在线</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hardware Specs -->
+        <div class="hardware-section">
+          <div class="hardware-item">
+            <span class="hardware-label">CPU</span>
+            <span class="hardware-value">Intel i7-12700H</span>
+            <span class="hardware-sub">2.7 GHz · 14 核心</span>
+          </div>
+          <div class="hardware-item">
+            <span class="hardware-label">GPU</span>
+            <span class="hardware-value">NVIDIA RTX 3060</span>
+            <span class="hardware-sub">6GB GDDR6 · 140W</span>
+          </div>
+          <div class="hardware-item">
+            <span class="hardware-label">内存</span>
+            <span class="hardware-value">32 GB</span>
+            <span class="hardware-sub">DDR5 4800MHz · 双通道</span>
+          </div>
+          <div class="hardware-item">
+            <span class="hardware-label">主机名</span>
+            <span class="hardware-value">DESKTOP-1D39QRK</span>
+            <span class="hardware-sub">用户名: public</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Middle Row -->
+      <div class="middle-row">
+        <!-- AI Chat Section -->
+        <div class="ai-chat-section">
+          <div class="ai-chat-header">
+            <div class="cat-avatar" style="width:32px;height:32px;"><img src="./assets/images/shizuku.png" alt="shizuku" /></div>
+            <div>
+              <div style="font-size:13px;font-weight:600;">AI 对话</div>
+              <div style="font-size:10px;color:var(--text-muted);">雫在这里聆听你的指令</div>
+            </div>
+          </div>
+          <div class="ai-chat-messages">
+            <div class="chat-message">
+              <div class="chat-avatar"><img src="./assets/images/shizuku.png" alt="shizuku" /></div>
+              <div class="chat-content">
+                <div class="name shizuku">雫</div>
+                <div class="text">你好！我是猫羽雫，你的 AI 电脑管家。有什么我可以帮你的吗？你可以直接输入命令，或者用自然语言描述你想做的事～</div>
+              </div>
+            </div>
+          </div>
+          <div class="chat-input-area">
+            <input type="text" placeholder="输入命令或问题..." />
+            <button class="chat-send-btn">发送</button>
+          </div>
+        </div>
+
+        <!-- Right Side: Terminal + Monitoring -->
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <!-- Live Stats -->
+          <div class="panel" style="flex:1;min-height:0;">
+            <div class="panel-header">
+              <span class="panel-title">
+                <span class="icon">
+                  <svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+                </span> 实时占用
+              </span>
+              <div class="panel-actions">
+                <button class="panel-btn">刷新</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="stats-grid">
+                <div class="stat-card cpu">
+                  <div class="stat-header">
+                    <div class="stat-icon cpu">
+                      <svg viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                    </div>
+                    <span class="stat-value">42%</span>
+                  </div>
+                  <div class="stat-label">CPU</div>
+                  <div class="stat-bar"><div class="stat-bar-fill" style="width: 42%"></div></div>
+                </div>
+                <div class="stat-card gpu">
+                  <div class="stat-header">
+                    <div class="stat-icon gpu">
+                      <svg viewBox="0 0 24 24"><line x1="6" y1="12" x2="6" y2="12"/><circle cx="12" cy="12" r="10"/><path d="M15.5 8.5c-.5-1-1.5-2-3-2s-2.5 1-3 2"/><path d="M8.5 15.5c.5 1 1.5 2 3 2s2.5-1 3-2"/></svg>
+                    </div>
+                    <span class="stat-value">67%</span>
+                  </div>
+                  <div class="stat-label">GPU</div>
+                  <div class="stat-bar"><div class="stat-bar-fill" style="width: 67%"></div></div>
+                </div>
+                <div class="stat-card ram">
+                  <div class="stat-header">
+                    <div class="stat-icon ram">
+                      <svg viewBox="0 0 24 24"><path d="M6 19V5"/><path d="M18 19V5"/><path d="M2 9h4"/><path d="M18 9h4"/><path d="M6 9h12"/><path d="M6 15h12"/></svg>
+                    </div>
+                    <span class="stat-value">38%</span>
+                  </div>
+                  <div class="stat-label">内存</div>
+                  <div class="stat-bar"><div class="stat-bar-fill" style="width: 38%"></div></div>
+                </div>
+                <div class="stat-card disk">
+                  <div class="stat-header">
+                    <div class="stat-icon disk">
+                      <svg viewBox="0 0 24 24"><line x1="22" y1="12" x2="2" y2="12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" y1="16" x2="6.01" y2="16"/><line x1="10" y1="16" x2="10.01" y2="16"/></svg>
+                    </div>
+                    <span class="stat-value">65%</span>
+                  </div>
+                  <div class="stat-label">C盘</div>
+                  <div class="stat-bar"><div class="stat-bar-fill" style="width: 65%"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Manual Terminal -->
+          <div class="manual-terminal" style="height:180px;">
+            <div class="terminal-tabs-row">
+              <div class="terminal-tab-btn active">
+                <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                PowerShell
+              </div>
+              <div class="terminal-tab-btn">
+                <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                CMD
+              </div>
+            </div>
+            <div class="terminal-output">
+              <div class="terminal-line">
+                <span class="output">Windows PowerShell</span>
+              </div>
+              <div class="terminal-line">
+                <span class="output">版权所有 (C) Microsoft Corporation。保留所有权利。</span>
+              </div>
+              <div class="terminal-line">
+                <span class="output"></span>
+              </div>
+              <div class="terminal-line">
+                <span class="prompt">PS</span> <span class="path">C:\Users\public></span> <span class="cursor" style="display:inline-block;width:8px;height:12px;background:var(--accent-pink);vertical-align:middle;animation:blink 1s infinite;"></span>
+              </div>
+            </div>
+            <div class="terminal-input-row">
+              <span>PS C:\Users\public></span>
+              <input type="text" placeholder="输入命令..." />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Row -->
+      <div class="bottom-row">
+        <!-- Process List -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">
+              <span class="icon">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              </span> 进程
+            </span>
+            <div class="panel-actions">
+              <button class="panel-btn">排序</button>
+            </div>
+          </div>
+          <div class="panel-body" style="padding:6px;">
+            <table class="process-table">
+              <thead>
+                <tr>
+                  <th>进程</th>
+                  <th>PID</th>
+                  <th>内存</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><div class="process-name"><span class="process-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> chrome.exe</div></td>
+                  <td>12340</td>
+                  <td class="process-memory">1.2 GB</td>
+                </tr>
+                <tr>
+                  <td><div class="process-name"><span class="process-icon"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span> code.exe</div></td>
+                  <td>8420</td>
+                  <td class="process-memory">856 MB</td>
+                </tr>
+                <tr>
+                  <td><div class="process-name"><span class="process-icon"><svg viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect x="8" y="8" width="8" height="8" rx="1"/><path d="M12 8a4 4 0 0 0 4 4"/><path d="M12 8a4 4 0 0 1-4 4"/><path d="M12 16v4"/><path d="M8 16h8"/></svg></span> NachoNya.exe</div></td>
+                  <td>15888</td>
+                  <td class="process-memory">245 MB</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Network Ports -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">
+              <span class="icon">
+                <svg viewBox="0 0 24 24"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>
+              </span> 端口
+            </span>
+            <div class="panel-actions">
+              <button class="panel-btn">刷新</button>
+            </div>
+          </div>
+          <div class="panel-body" style="padding:6px;">
+            <table class="port-table">
+              <thead>
+                <tr>
+                  <th>地址</th>
+                  <th>协议</th>
+                  <th>进程</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="port-num">0.0.0.0:135</span></td>
+                  <td class="port-proto">TCP</td>
+                  <td class="port-process">rpcss</td>
+                </tr>
+                <tr>
+                  <td><span class="port-num">0.0.0.0:445</span></td>
+                  <td class="port-proto">TCP</td>
+                  <td class="port-process">svchost</td>
+                </tr>
+                <tr>
+                  <td><span class="port-num">127.0.0.1:5050</span></td>
+                  <td class="port-proto">TCP</td>
+                  <td class="port-process">NachoNya</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Environment Variables -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">
+              <span class="icon">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              </span> 环境变量
+            </span>
+            <div class="panel-actions">
+              <button class="panel-btn">用户</button>
+            </div>
+          </div>
+          <div class="panel-body" style="padding:6px;">
+            <div class="env-list">
+              <div class="env-item">
+                <span class="env-key">PATH</span>
+                <span class="env-value">C:\Windows\system32;...</span>
+              </div>
+              <div class="env-item">
+                <span class="env-key">TEMP</span>
+                <span class="env-value">C:\Users\public\AppData\Local\Temp</span>
+              </div>
+              <div class="env-item">
+                <span class="env-key">JAVA_HOME</span>
+                <span class="env-value">C:\Program Files\Java\jdk-17</span>
+              </div>
+              <div class="env-item">
+                <span class="env-key">NODE_PATH</span>
+                <span class="env-value">C:\Program Files\nodejs</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="right-panel">
+      <!-- Device Info -->
+      <div class="right-section">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          设备信息
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; font-size: 11px;">
+            <span style="color: var(--text-muted);">主板</span>
+            <span>XXX Laptop</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 11px;">
+            <span style="color: var(--text-muted);">显示器</span>
+            <span>15.6" FHD</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 11px;">
+            <span style="color: var(--text-muted);">硬盘</span>
+            <span>512GB NVMe</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 11px;">
+            <span style="color: var(--text-muted);">电池</span>
+            <span style="color: var(--terminal-green);">已接通电源</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="right-section">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          快捷操作
+        </div>
+        <div class="action-grid">
+          <div class="action-btn">
+            <div class="action-btn-icon pink">
+              <svg viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+            </div>
+            <div class="action-btn-text">
+              <h4>清理垃圾</h4>
+              <p>释放磁盘空间</p>
+            </div>
+          </div>
+          <div class="action-btn">
+            <div class="action-btn-icon cyan">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <div class="action-btn-text">
+              <h4>查找重复</h4>
+              <p>节省存储空间</p>
+            </div>
+          </div>
+          <div class="action-btn">
+            <div class="action-btn-icon yellow">
+              <svg viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+            </div>
+            <div class="action-btn-text">
+              <h4>磁盘分析</h4>
+              <p>查看空间占用</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Commands -->
+      <div class="right-section">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          快速命令
+        </div>
+        <div class="quick-actions">
+          <span class="quick-action">systeminfo</span>
+          <span class="quick-action">tasklist</span>
+          <span class="quick-action">netstat -ano</span>
+          <span class="quick-action">ipconfig</span>
+          <span class="quick-action">ping</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="statusbar">
+      <div class="statusbar-item"><img src="./assets/images/shizuku.png" class="statusbar-avatar" alt="shizuku" /> 雫在线</div>
+      <div class="statusbar-item"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> 病毒防护 已启动</div>
+      <div class="statusbar-item"><svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg> 已连接 · 100Mbps</div>
+      <div class="statusbar-item"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg> C:68GB D:820GB</div>
+      <div class="statusbar-right">
+        <div class="statusbar-item">中文</div>
+        <div class="statusbar-item"><span class="time">15:30</span></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
