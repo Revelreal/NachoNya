@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NachoNya! - 界面草稿</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-dark: #1e1e1e;
+      --bg-darker: #181818;
+      --bg-card: #252525;
+      --accent-pink: #ff9a9e;
+      --accent-pink-light: #fad0c4;
+      --text-primary: #ffffff;
+      --text-secondary: #8a8a8a;
+      --border: #2d2d2d;
+    }
+
+    body {
+      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* 整体布局 - VS Code 风格 */
+    .app-container {
+      display: grid;
+      grid-template-rows: 38px 1fr 28px;
+      grid-template-columns: 48px 160px 1fr 240px;
+      height: 100vh;
+    }
+
+    /* 标题栏 */
+    .titlebar {
+      grid-column: 1 / -1;
+      background: var(--bg-darker);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--border);
+      user-select: none;
+    }
+
+    .titlebar .logo {
+      color: var(--accent-pink);
+      font-size: 14px;
+      font-weight: 700;
+      margin-right: 20px;
+    }
+
+    .titlebar .menu {
+      display: flex;
+      gap: 4px;
+    }
+
+    .titlebar .menu-item {
+      padding: 6px 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .titlebar .menu-item:hover {
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    /* Activity Bar */
+    .activity-bar {
+      background: var(--bg-darker);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 0;
+      gap: 4px;
+      border-right: 1px solid var(--border);
+    }
+
+    .activity-icon {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .activity-icon:hover {
+      background: var(--bg-card);
+    }
+
+    .activity-icon.active {
+      background: var(--bg-card);
+      border-left: 2px solid var(--accent-pink);
+    }
+
+    .activity-icon.home { color: #ff9a9e; }
+    .activity-icon.clean { color: #4ecdc4; }
+    .activity-icon.tool { color: #ffe66d; }
+    .activity-icon.ai { color: #a8edea; }
+    .activity-icon.setting { color: #8a8a8a; }
+
+    .activity-spacer { flex: 1; }
+
+    /* Sidebar */
+    .sidebar {
+      background: var(--bg-darker);
+      padding: 12px 8px;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+    }
+
+    .sidebar-section {
+      margin-bottom: 16px;
+    }
+
+    .sidebar-title {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      padding: 8px 10px 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .sidebar-item {
+      padding: 8px 10px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .sidebar-item:hover {
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    .sidebar-item.active {
+      background: var(--bg-card);
+      color: var(--accent-pink);
+    }
+
+    .sidebar-item .icon { font-size: 16px; }
+    .sidebar-item .count {
+      margin-left: auto;
+      font-size: 11px;
+      background: var(--accent-pink);
+      color: var(--bg-dark);
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    /* 主内容区 */
+    .main-content {
+      background: var(--bg-dark);
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    /* Tab 栏 */
+    .tab-bar {
+      display: flex;
+      gap: 2px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 2px;
+    }
+
+    .tab {
+      padding: 10px 18px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      color: var(--text-primary);
+    }
+
+    .tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--accent-pink);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .section-title .highlight {
+      color: var(--accent-pink);
+    }
+
+    .section-action {
+      font-size: 12px;
+      color: var(--accent-pink);
+      cursor: pointer;
+    }
+
+    /* 体检卡片 - 2x2 网格 */
+    .health-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .health-card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 1px solid transparent;
+    }
+
+    .health-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent-pink);
+      box-shadow: 0 4px 20px rgba(255, 154, 158, 0.15);
+    }
+
+    .health-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      flex-shrink: 0;
+    }
+
+    .health-card.cpu .health-icon { background: linear-gradient(135deg, #ff6b6b, #ff8e8e); }
+    .health-card.ram .health-icon { background: linear-gradient(135deg, #4ecdc4, #7ee8e0); }
+    .health-card.disk .health-icon { background: linear-gradient(135deg, #ffe66d, #fff4a3); color: #333; }
+    .health-card.net .health-icon { background: linear-gradient(135deg, #a8e6cf, #c8f0dc); color: #333; }
+
+    .health-info { flex: 1; }
+
+    .health-info .label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .health-info .value {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .health-info .status {
+      font-size: 11px;
+      color: #4caf50;
+    }
+
+    .health-card.cpu .status { color: #ff9800; }
+    .health-card.ram .status { color: #4caf50; }
+    .health-card.disk .status { color: #2196f3; }
+    .health-card.net .status { color: var(--text-secondary); }
+
+    /* 功能卡片 */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 18px;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 1px solid transparent;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent-pink);
+    }
+
+    .feature-card .icon {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .feature-card .title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .feature-card .desc {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* 右侧面板 */
+    .right-panel {
+      background: var(--bg-darker);
+      padding: 16px 12px;
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    .panel-card {
+      background: var(--bg-card);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .quick-action {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .quick-action:hover {
+      background: var(--bg-darker);
+      color: var(--text-primary);
+    }
+
+    .quick-action .icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .quick-action.speed .icon { background: linear-gradient(135deg, #ff6b6b, #ff8e8e); }
+    .quick-action.clean .icon { background: linear-gradient(135deg, #4ecdc4, #7ee8e0); }
+    .quick-action.game .icon { background: linear-gradient(135deg, #a8e6cf, #c8f0dc); color: #333; }
+
+    .action-btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .action-btn.primary {
+      background: linear-gradient(135deg, var(--accent-pink), var(--accent-pink-light));
+      color: var(--bg-dark);
+    }
+
+    .action-btn.primary:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 15px rgba(255, 154, 158, 0.3);
+    }
+
+    .action-btn.secondary {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .action-btn.secondary:hover {
+      border-color: var(--accent-pink);
+    }
+
+    /* 状态栏 */
+    .statusbar {
+      grid-column: 1 / -1;
+      background: #0078d4;
+      color: white;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 16px;
+    }
+
+    .statusbar .item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+
+    .statusbar .item:hover {
+      text-decoration: underline;
+    }
+
+    .statusbar .right {
+      margin-left: auto;
+      display: flex;
+      gap: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 标题栏 -->
+    <div class="titlebar">
+      <span class="logo">&#128008; NachoNya!</span>
+      <div class="menu">
+        <div class="menu-item">文件</div>
+        <div class="menu-item">编辑</div>
+        <div class="menu-item">视图</div>
+        <div class="menu-item">帮助</div>
+      </div>
+    </div>
+
+    <!-- Activity Bar -->
+    <div class="activity-bar">
+      <div class="activity-icon home active">&#128640;</div>
+      <div class="activity-icon clean">&#129533;</div>
+      <div class="activity-icon tool">&#128736;</div>
+      <div class="activity-icon ai">&#129302;</div>
+      <div class="activity-spacer"></div>
+      <div class="activity-icon setting">&#9881;</div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">快捷</div>
+        <div class="sidebar-item active">
+          <span class="icon">&#127968;</span>
+          首页
+        </div>
+        <div class="sidebar-item">
+          <span class="icon">&#128202;</span>
+          仪表盘
+        </div>
+        <div class="sidebar-item">
+          <span class="icon">&#128200;</span>
+          体检记录
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">工具</div>
+        <div class="sidebar-item">
+          <span class="icon">&#129533;</span>
+          垃圾清理
+        </div>
+        <div class="sidebar-item">
+          <span class="icon">&#128193;</span>
+          桌面整理
+        </div>
+        <div class="sidebar-item">
+          <span class="icon">&#128269;</span>
+          重复查找
+          <span class="count">3</span>
+        </div>
+        <div class="sidebar-item">
+          <span class="icon">&#128190;</span>
+          大文件
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">AI</div>
+        <div class="sidebar-item">
+          <span class="icon">&#129302;</span>
+          AI 助手
+        </div>
+        <div class="sidebar-item">
+          <span class="icon">&#128247;</span>
+          图片压缩
+        </div>
+      </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+      <div class="tab-bar">
+        <div class="tab active">&#128202; 仪表盘</div>
+        <div class="tab">&#129533; 清理报告</div>
+      </div>
+
+      <div class="section-header">
+        <h1 class="section-title">&#128161; 你好，<span class="highlight">雫</span>在这里守护你的电脑</h1>
+        <span class="section-action">查看全部 →</span>
+      </div>
+
+      <!-- 体检卡片 -->
+      <div class="health-grid">
+        <div class="health-card cpu">
+          <div class="health-icon">&#128187;</div>
+          <div class="health-info">
+            <div class="label">CPU 温度</div>
+            <div class="value">58°C</div>
+            <div class="status">占用 42%</div>
+          </div>
+        </div>
+        <div class="health-card ram">
+          <div class="health-icon">&#128203;</div>
+          <div class="health-info">
+            <div class="label">内存</div>
+            <div class="value">12.3 GB</div>
+            <div class="status">38% / 31.9 GB</div>
+          </div>
+        </div>
+        <div class="health-card disk">
+          <div class="health-icon">&#128190;</div>
+          <div class="health-info">
+            <div class="label">C盘 可用</div>
+            <div class="value">68.5 GB</div>
+            <div class="status">正常</div>
+          </div>
+        </div>
+        <div class="health-card net">
+          <div class="health-icon">&#127760;</div>
+          <div class="health-info">
+            <div class="label">网络</div>
+            <div class="value">正常</div>
+            <div class="status">延迟 24ms</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <h2 class="section-title" style="font-size: 16px;">&#9889; 快速操作</h2>
+      </div>
+
+      <!-- 功能卡片 -->
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="icon">&#129533;</div>
+          <div class="title">一键清理</div>
+          <div class="desc">清理临时文件和缓存</div>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#128193;</div>
+          <div class="title">整理桌面</div>
+          <div class="desc">按类型分类桌面文件</div>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#128269;</div>
+          <div class="title">查找重复</div>
+          <div class="desc">找出重复文件节省空间</div>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#128190;</div>
+          <div class="title">大文件扫描</div>
+          <div class="desc">找出占用空间的大文件</div>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#129302;</div>
+          <div class="title">AI 助手</div>
+          <div class="desc">自然语言控制电脑</div>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#128247;</div>
+          <div class="title">图片压缩</div>
+          <div class="desc">批量压缩图片节省空间</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧面板 -->
+    <div class="right-panel">
+      <button class="action-btn primary">&#9889; 一键优化</button>
+      <button class="action-btn secondary">&#128737; 开始体检</button>
+
+      <div class="panel-card">
+        <div class="panel-title">&#127919; 快速访问</div>
+        <div class="quick-action speed">
+          <div class="icon">&#127775;</div>
+          <span>加速</span>
+        </div>
+        <div class="quick-action clean">
+          <div class="icon">&#129533;</div>
+          <span>清理</span>
+        </div>
+        <div class="quick-action game">
+          <div class="icon">&#127918;</div>
+          <span>游戏加速</span>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-title">&#128167; 清理建议</div>
+        <div class="quick-action">
+          <span>临时文件可清理 2.3 GB</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 状态栏 -->
+    <div class="statusbar">
+      <div class="item">&#10003; 病毒防护已启动</div>
+      <div class="item">&#127760; 已连接</div>
+      <div class="right">
+        <div class="item">&#9575; 11:24</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
