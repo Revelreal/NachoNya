@@ -1,0 +1,41 @@
+{
+  "name": "nachonya",
+  "version": "1.0.0",
+  "description": "猫羽雫的 AI 电脑管家 - NachoNya! AI Computer Butler",
+  "main": "dist/main/index.js",
+  "author": "NachoNya Team",
+  "license": "MIT",
+  "scripts": {
+    "dev": "electron .",
+    "build": "tsc && electron-builder",
+    "build:win": "tsc && electron-builder --win",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0",
+    "systeminformation": "^5.23.5",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/uuid": "^10.0.0",
+    "electron": "^31.1.0",
+    "electron-builder": "^24.13.3",
+    "typescript": "^5.5.2"
+  },
+  "build": {
+    "appId": "com.nachonya.app",
+    "productName": "NachoNya",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    }
+  }
+}
