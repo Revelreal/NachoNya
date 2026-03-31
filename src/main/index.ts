@@ -12,6 +12,7 @@ import { serviceManager } from './core/ServiceManager';
 import { systemInfoService } from './services/SystemInfoService';
 import { processService } from './services/ProcessService';
 import { terminalService } from './services/TerminalService';
+import { agentService } from './services/AgentService';
 import { logger } from './utils/Logger';
 import { IpcMessage, IpcResponse } from '../shared/interfaces/ipc/message.interface';
 
@@ -185,6 +186,25 @@ function setupIpcHandlers(): void {
     return await terminalService.kill();
   });
 
+  // Agent 事件转发到渲染进程
+  agentService.setEventHandlers({
+    onStreaming: (text) => {
+      mainWindow?.webContents.send('agent:streaming', text);
+    },
+    onComplete: () => {
+      mainWindow?.webContents.send('agent:complete');
+    },
+    onError: (err) => {
+      mainWindow?.webContents.send('agent:error', err);
+    },
+    onToolCallStart: (toolName) => {
+      mainWindow?.webContents.send('agent:toolCallStart', toolName);
+    },
+    onToolCallComplete: () => {
+      mainWindow?.webContents.send('agent:toolCallComplete');
+    },
+  });
+
   logger.info('[Main] IPC handlers registered');
 }
 
@@ -199,6 +219,9 @@ function registerServices(): void {
 
   // 注册终端服务
   terminalService.setMainWindow(mainWindow);
+
+  // 注册 AI 对话服务
+  serviceManager.register(agentService);
 
   logger.info('[Main] All services registered');
 }

@@ -225,10 +225,11 @@ class SystemInfoService implements IService {
     if (cached) return cached as GpuInfo[];
 
     const data = await si.graphics();
-    // 并行获取 nvidia-smi 数据
-    const [nvidiaTemps, nvidiaUtilizations] = await Promise.all([
+    // 并行获取 nvidia-smi 数据 + Windows PDH 计数器（支持所有 GPU）
+    const [nvidiaTemps, nvidiaUtils, pdhUtils] = await Promise.all([
       this.getNvidiaGpuTemperatures(),
       this.getNvidiaGpuUtilizations(),
+      this.getGpuUtilizationViaPdh(),
     ]);
 
     const result: GpuInfo[] = data.controllers.map((gpu, index) => {
@@ -236,17 +237,19 @@ class SystemInfoService implements IService {
                        gpu.model?.toLowerCase().includes('nvidia') ||
                        gpu.model?.toLowerCase().includes('geforce');
 
-      // 优先使用 nvidia-smi 数据，否则用 systeminformation
+      // 温度：优先 nvidia-smi，其次 systeminformation
       let temperature: number | undefined = gpu.temperatureGpu;
-      let utilization: number = gpu.utilizationGpu ?? 0;
+      if (isNvidia && nvidiaTemps[index] !== undefined) {
+        temperature = nvidiaTemps[index];
+      }
 
-      if (isNvidia) {
-        if (nvidiaTemps[index] !== undefined) {
-          temperature = nvidiaTemps[index];
-        }
-        if (nvidiaUtilizations[index] !== undefined) {
-          utilization = nvidiaUtilizations[index];
-        }
+      // 占用率：优先 nvidia-smi → Windows PDH 计数器 → systeminformation
+      let utilization: number = gpu.utilizationGpu ?? 0;
+      if (isNvidia && nvidiaUtils[index] !== undefined) {
+        utilization = nvidiaUtils[index];
+      } else if (pdhUtils.length > 0) {
+        // PDH 计数器包含所有 GPU，按顺序对应
+        utilization = pdhUtils[index] ?? 0;
       }
 
       return {
@@ -261,6 +264,41 @@ class SystemInfoService implements IService {
 
     this.setCache('gpus', result);
     return result;
+  }
+
+  // 通过 Windows PDH 计数器获取所有 GPU 利用率（支持 Intel/AMD/NVIDIA）
+  // \GPU Engine(*)\Utilization Percentage 包含所有 GPU 所有引擎的实时占用率
+  private async getGpuUtilizationViaPdh(): Promise<number[]> {
+    try {
+      const ps = [
+        '$counters = Get-Counter "\\GPU Engine(*)\\Utilization Percentage" -SampleInterval 1 -MaxSamples 1 2>$null;',
+        'if (-not $counters) { return };',
+        '# 按 LUID 分组，取所有引擎的最大值作为该 GPU 的总占用',
+        '$gpuMap = @{};',
+        'foreach ($sample in $counters.CounterSamples) {',
+        '  if ($sample.InstanceName -match "luid_(0x[0-9a-f]+)_(0x[0-9a-f]+)_phys_(\\d+)") {',
+        '    $high = $Matches[1]; $low = $Matches[2]; $phys = $Matches[3];',
+        '    $key = "${high}_${low}_phys${phys}";',
+        '    $val = $sample.CookedValue;',
+        '    if (-not $gpuMap.ContainsKey($key) -or $gpuMap[$key] -lt $val) { $gpuMap[$key] = $val }',
+        '  }',
+        '};',
+        '$gpuMap.Values.GetEnumerator() | Sort-Object -Descending | ForEach-Object { [math]::Round($_, 0) }',
+      ].join(' ');
+
+      const { stdout } = await execAsync(
+        `powershell -Command "${ps}"`,
+        { timeout: 5000 }
+      );
+
+      const utils = stdout.trim().split('\n')
+        .map((t: string) => parseInt(t.trim(), 10))
+        .filter((t: number) => !isNaN(t) && t >= 0 && t <= 100);
+
+      return utils;
+    } catch {
+      return [];
+    }
   }
 
   // 通过 nvidia-smi 获取 NVIDIA GPU 温度列表

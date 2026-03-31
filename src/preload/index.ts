@@ -78,6 +78,8 @@ const api = {
     kill: (pid: number) => api.service.execute('ProcessService', 'killProcess', { pid }),
     listPorts: () => api.service.execute('ProcessService', 'listPorts'),
     killPort: (port: number) => api.service.execute('ProcessService', 'killPort', { port }),
+    listEnvVars: () => api.service.execute('ProcessService', 'listEnvVars'),
+    getIcons: () => api.service.execute<unknown, { name: string; iconBase64: string }[]>('ProcessService', 'getProcessIcons'),
   },
 
   /**
@@ -98,6 +100,44 @@ const api = {
     },
     onExit: (callback: (exitCode: number) => void) => {
       ipcRenderer.on('shell:exit', (_event, exitCode) => callback(exitCode));
+    },
+  },
+
+  /**
+   * AI 对话服务
+   */
+  agent: {
+    chat: (message: string) =>
+      api.service.execute('AgentService', 'chat', { message }),
+    setConfig: (config: {
+      apiKey?: string;
+      baseUrl?: string;
+      model?: string;
+      enableToolCalls?: boolean;
+    }) => api.service.execute('AgentService', 'setConfig', config),
+    testConnection: (config: {
+      apiKey?: string;
+      baseUrl?: string;
+      model?: string;
+    }) => api.service.execute('AgentService', 'testConnection', config),
+    clearHistory: () =>
+      api.service.execute('AgentService', 'clearHistory'),
+    getHistory: () =>
+      api.service.execute<unknown, { role: string; content: string }[]>('AgentService', 'getHistory'),
+    onStreaming: (callback: (text: string) => void) => {
+      ipcRenderer.on('agent:streaming', (_event, text) => callback(text));
+    },
+    onComplete: (callback: () => void) => {
+      ipcRenderer.on('agent:complete', () => callback());
+    },
+    onError: (callback: (err: string) => void) => {
+      ipcRenderer.on('agent:error', (_event, err) => callback(err));
+    },
+    onToolCallStart: (callback: (toolName: string) => void) => {
+      ipcRenderer.on('agent:toolCallStart', (_event, toolName) => callback(toolName));
+    },
+    onToolCallComplete: (callback: () => void) => {
+      ipcRenderer.on('agent:toolCallComplete', () => callback());
     },
   },
 };

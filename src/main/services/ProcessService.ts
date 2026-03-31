@@ -20,6 +20,12 @@ export interface ProcessInfo {
   cpu: number; // %
   session: string;
   sessionNum: number;
+  exePath?: string;
+}
+
+export interface ProcessIcon {
+  name: string;
+  iconBase64: string; // PNG base64
 }
 
 export interface PortInfo {
@@ -28,6 +34,7 @@ export interface PortInfo {
   protocol: 'TCP' | 'UDP';
   pid: number;
   state: string;
+  processName?: string;
 }
 
 export interface WinServiceInfo {
@@ -47,7 +54,7 @@ class ProcessService implements IService {
       data: {
         name: this.name,
         version: this.version,
-        capabilities: ['listProcesses', 'getProcess', 'killProcess', 'listPorts', 'killPort', 'listServices', 'getService'],
+        capabilities: ['listProcesses', 'getProcess', 'killProcess', 'listPorts', 'killPort', 'listServices', 'getService', 'listEnvVars', 'getProcessIcons'],
         status: 'running',
       },
       requestId: '',
@@ -69,6 +76,10 @@ class ProcessService implements IService {
           return this.wrapResponse(await this.killPort(params as { port: number }));
         case 'listServices':
           return this.wrapResponse(await this.listServices());
+        case 'listEnvVars':
+          return this.wrapResponse(await this.listEnvVars());
+        case 'getProcessIcons':
+          return this.wrapResponse(await this.getProcessIcons());
         default:
           return { success: false, error: { code: 'S0001', message: `Unknown action: ${action}` }, requestId: '' };
       }
@@ -160,11 +171,26 @@ class ProcessService implements IService {
   // ========== 端口列表 ==========
 
   private async listPorts(): Promise<PortInfo[]> {
-    const { stdout } = await execAsync('netstat -ano', { encoding: 'utf8' });
-    return this.parseNetstat(stdout);
+    const [netstatOut, tasklistOut] = await Promise.all([
+      execAsync('netstat -ano', { encoding: 'utf8' }),
+      execAsync('tasklist /FO CSV /NH', { encoding: 'utf8' }),
+    ]);
+
+    // 构建 PID → 进程名 映射
+    const pidToName: Record<number, string> = {};
+    for (const line of tasklistOut.stdout.trim().split('\n')) {
+      const parts = this.parseCSV(line);
+      if (parts.length >= 2) {
+        const name = parts[0].replace(/"/g, '');
+        const pid = parseInt(parts[1].replace(/"/g, ''), 10);
+        if (!isNaN(pid)) pidToName[pid] = name;
+      }
+    }
+
+    return this.parseNetstat(netstatOut.stdout, pidToName);
   }
 
-  private parseNetstat(output: string): PortInfo[] {
+  private parseNetstat(output: string, pidToName: Record<number, string> = {}): PortInfo[] {
     const lines = output.trim().split('\n');
     const ports: PortInfo[] = [];
 
@@ -193,6 +219,7 @@ class ProcessService implements IService {
         port,
         pid,
         state,
+        processName: pidToName[pid] || `PID:${pid}`,
       });
     }
 
@@ -217,6 +244,86 @@ class ProcessService implements IService {
   private async listServices(): Promise<WinServiceInfo[]> {
     const { stdout } = await execAsync('sc query state= all', { encoding: 'utf8' });
     return this.parseServicesList(stdout);
+  }
+
+  // ========== 环境变量 ==========
+
+  private async listEnvVars(): Promise<{ user: Record<string, string>; system: Record<string, string> }> {
+    const [userOut, systemOut] = await Promise.all([
+      execAsync('powershell -Command "[Environment]::GetEnvironmentVariables(\'User\') | ConvertTo-Json -Compress"', { encoding: 'utf8', timeout: 8000 }),
+      execAsync('powershell -Command "[Environment]::GetEnvironmentVariables(\'Machine\') | ConvertTo-Json -Compress"', { encoding: 'utf8', timeout: 8000 }),
+    ]);
+
+    let userVars: Record<string, string> = {};
+    let systemVars: Record<string, string> = {};
+
+    try {
+      userVars = JSON.parse(userOut.stdout.trim() || '{}');
+    } catch { /* ignore */ }
+
+    try {
+      systemVars = JSON.parse(systemOut.stdout.trim() || '{}');
+    } catch { /* ignore */ }
+
+    return { user: userVars, system: systemVars };
+  }
+
+  // ========== 进程图标 ==========
+
+  private async getProcessIcons(): Promise<ProcessIcon[]> {
+    const iconMap = new Map<string, string>();
+
+    // 获取进程名和可执行文件路径列表
+    const { stdout } = await execAsync(
+      'powershell -NoProfile -Command "Get-Process | Where-Object { $_.MainModule.FileName } | Select-Object -First 30 | ForEach-Object { $_.ProcessName + \'|\' + $_.MainModule.FileName }"',
+      { encoding: 'utf8', timeout: 15000 }
+    );
+
+    const lines = stdout.trim().split('\n').filter(l => l.includes('|'));
+
+    for (const line of lines) {
+      const idx = line.indexOf('|');
+      const name = line.substring(0, idx).trim();
+      const filePath = line.substring(idx + 1).trim();
+
+      if (!name || !filePath || iconMap.has(name)) continue;
+
+      // 用 PowerShell 脚本块 + Icon.ExtractAssociatedIcon 提取，脚本块内变量不与外层冲突
+      const escapedPath = filePath.replace(/'/g, "''");
+      const psCode = `
+        Add-Type -AssemblyName System.Drawing
+        $icon = [System.Drawing.Icon]::ExtractAssociatedIcon('${escapedPath}')
+        if ($icon) {
+          $bmp = $icon.ToBitmap()
+          $ms = New-Object System.IO.MemoryStream
+          $bmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
+          $bytes = $ms.ToArray()
+          $ms.Close()
+          $icon.Dispose()
+          $bmp.Dispose()
+          [Convert]::ToBase64String($bytes)
+        }
+      `;
+
+      // 用 -EncodedCommand 避免所有转义问题
+      const encoded = Buffer.from(psCode, 'utf16le').toString('base64');
+      try {
+        const { stdout: iconB64 } = await execAsync(
+          `powershell -NoProfile -EncodedCommand ${encoded}`,
+          { encoding: 'utf8', timeout: 8000 }
+        );
+
+        const b64 = iconB64.trim();
+        if (b64 && b64.length > 100 && b64.length < 500000 && !b64.toLowerCase().startsWith('add-type')) {
+          iconMap.set(name, b64);
+        }
+      } catch {
+        // Skip failures
+      }
+    }
+
+    logger.info(`[ProcessService] Icons extracted: ${iconMap.size}`);
+    return Array.from(iconMap.entries()).map(([n, b64]) => ({ name: n, iconBase64: b64 }));
   }
 
   private parseServicesList(output: string): WinServiceInfo[] {

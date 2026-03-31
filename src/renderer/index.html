@@ -477,7 +477,7 @@
     .middle-row {
       flex: 1;
       display: grid;
-      grid-template-columns: 1fr 420px;
+      grid-template-columns: 340px 1fr;
       gap: 12px;
       padding: 0 12px;
       min-height: 0;
@@ -501,6 +501,8 @@
       background: var(--bg-darker);
       border-bottom: 1px solid var(--border);
     }
+
+    #ai-settings-btn:hover { background: var(--bg-card); color: var(--text-primary); }
 
     .ai-chat-messages {
       flex: 1;
@@ -927,9 +929,63 @@
       color: var(--terminal-green);
     }
 
+    .kill-btn {
+      background: none;
+      border: none;
+      color: var(--terminal-red);
+      cursor: pointer;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      opacity: 0.5;
+      transition: opacity 0.2s;
+    }
+    .kill-btn:hover {
+      opacity: 1;
+      background: rgba(248, 113, 113, 0.15);
+    }
+
+    .process-icon-img {
+      width: 18px;
+      height: 18px;
+      border-radius: 3px;
+      vertical-align: middle;
+      margin-right: 5px;
+      image-rendering: pixelated;
+      flex-shrink: 0;
+    }
+
+    .process-name {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .env-tab-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 4px;
+      transition: all 0.2s;
+    }
+    .env-tab-btn:hover {
+      color: var(--text-primary);
+      border-color: var(--text-muted);
+    }
+    .env-tab-btn.active {
+      color: var(--accent-pink);
+      border-color: var(--accent-pink);
+      background: rgba(255,154,158,0.1);
+    }
+
     /* Bottom Row - Tabs Section */
     .bottom-row {
-      height: 200px;
+      height: 260px;
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 12px;
@@ -1202,8 +1258,28 @@
             <div class="cat-avatar" style="width:32px;height:32px;"><img src="./assets/images/shizuku.png" alt="shizuku" /></div>
             <div>
               <div style="font-size:13px;font-weight:600;">AI 对话</div>
-              <div style="font-size:10px;color:var(--text-muted);">雫在这里聆听你的指令</div>
+              <div style="font-size:10px;color:var(--text-muted);" id="ai-status">雫在这里聆听你的指令</div>
             </div>
+            <button id="ai-settings-btn" title="AI 设置" style="margin-left:auto;background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:14px;padding:4px 6px;border-radius:4px;">
+              ⚙️
+            </button>
+          </div>
+          <div id="ai-settings-panel" style="display:none;padding:10px 12px;background:var(--bg-input);border-bottom:1px solid var(--border);">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">API Key</div>
+            <input type="password" id="ai-apikey-input" placeholder="输入 MiniMax API Key..." style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:11px;outline:none;" />
+            <div style="font-size:11px;color:var(--text-muted);margin:8px 0 6px;">Base URL</div>
+            <input type="text" id="ai-baseurl-input" value="https://api.minimax.chat/v" placeholder="https://api.minimax.chat/v" style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:11px;outline:none;" />
+            <div style="font-size:11px;color:var(--text-muted);margin:8px 0 6px;">模型</div>
+            <input type="text" id="ai-model-input" placeholder="MiniMax-Text-01" style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:11px;outline:none;" />
+            <div style="display:flex;align-items:center;gap:6px;margin-top:8px;">
+              <input type="checkbox" id="ai-toolcalls-check" checked />
+              <label for="ai-toolcalls-check" style="font-size:11px;color:var(--text-secondary);">启用工具调用</label>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+              <button id="ai-test-btn" style="flex:1;padding:6px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-secondary);font-size:11px;cursor:pointer;">测试连接</button>
+              <button id="ai-save-settings-btn" style="flex:2;padding:6px;background:linear-gradient(135deg,var(--accent-pink),var(--accent-pink-light));border:none;border-radius:6px;color:#0a0a0a;font-size:11px;font-weight:600;cursor:pointer;">保存设置</button>
+            </div>
+            <div id="ai-test-result" style="margin-top:6px;font-size:11px;text-align:center;"></div>
           </div>
           <div class="ai-chat-messages">
             <div class="chat-message">
@@ -1213,9 +1289,16 @@
                 <div class="text">你好！我是猫羽雫，你的 AI 电脑管家。有什么我可以帮你的吗？你可以直接输入命令，或者用自然语言描述你想做的事～</div>
               </div>
             </div>
+            <div class="chat-message">
+              <div class="chat-avatar"><img src="./assets/images/shizuku.png" alt="shizuku" /></div>
+              <div class="chat-content">
+                <div class="name shizuku">雫</div>
+                <div class="text" style="font-size:11px;color:var(--text-muted);">💡 请先点击右上角 ⚙️ 设置你的 MiniMax API Key～</div>
+              </div>
+            </div>
           </div>
           <div class="chat-input-area">
-            <input type="text" placeholder="输入命令或问题..." />
+            <input type="text" id="chat-message-input" placeholder="输入命令或问题..." />
             <button class="chat-send-btn">发送</button>
           </div>
         </div>
@@ -1329,6 +1412,7 @@
                   <th>进程</th>
                   <th>PID</th>
                   <th>内存</th>
+                  <th style="text-align:right;">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -1370,7 +1454,9 @@
                 <tr>
                   <th>地址</th>
                   <th>协议</th>
-                  <th>进程</th>
+                  <th>状态</th>
+                  <th>PID</th>
+                  <th style="text-align:right;">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -1403,27 +1489,13 @@
               </span> 环境变量
             </span>
             <div class="panel-actions">
-              <button class="panel-btn">用户</button>
+              <button class="env-tab-btn active" data-scope="user">用户</button>
+              <button class="env-tab-btn" data-scope="system">系统</button>
             </div>
           </div>
-          <div class="panel-body" style="padding:6px;">
-            <div class="env-list">
-              <div class="env-item">
-                <span class="env-key">PATH</span>
-                <span class="env-value">C:\Windows\system32;...</span>
-              </div>
-              <div class="env-item">
-                <span class="env-key">TEMP</span>
-                <span class="env-value">C:\Users\public\AppData\Local\Temp</span>
-              </div>
-              <div class="env-item">
-                <span class="env-key">JAVA_HOME</span>
-                <span class="env-value">C:\Program Files\Java\jdk-17</span>
-              </div>
-              <div class="env-item">
-                <span class="env-key">NODE_PATH</span>
-                <span class="env-value">C:\Program Files\nodejs</span>
-              </div>
+          <div class="panel-body" style="padding:6px;overflow-y:auto;">
+            <div class="env-list" id="env-list">
+              <div class="env-loading" style="color:var(--text-muted);text-align:center;padding:8px;">加载中...</div>
             </div>
           </div>
         </div>
@@ -1532,6 +1604,13 @@
       const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
       const i = Math.floor(Math.log(bytes) / Math.log(k));
       return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = String(str);
+      return div.innerHTML;
     }
 
     function updateTideBar(id, percent, barClass) {
@@ -1667,6 +1746,220 @@
     // 页面加载后立即获取一次，然后每3秒更新
     fetchSystemInfo();
     setInterval(fetchSystemInfo, 3000);
+
+    // ========== 进程列表 ==========
+    let processSortBy = 'memory';
+    let processData = [];
+    const iconCache = {};
+
+    async function fetchProcessIcons() {
+      try {
+        const resp = await window.nachoApi.process.getIcons();
+        if (resp && resp.payload && resp.payload.success) {
+          const icons = resp.payload.data || [];
+          console.log('[进程] 获取到图标数量:', icons.length, icons.map(i => i.name).join(', '));
+          icons.forEach(item => {
+            iconCache[item.name] = item.iconBase64;
+          });
+        } else {
+          console.warn('[进程] 图标获取失败:', resp?.payload?.error);
+        }
+      } catch (e) {
+        console.warn('[进程] 图标获取失败:', e);
+      }
+    }
+
+    function getProcessIconHtml(name) {
+      const b64 = iconCache[name];
+      if (b64) {
+        return `<img src="data:image/png;base64,${b64}" class="process-icon-img" alt="${escapeHtml(name)}" />`;
+      }
+      // 尝试无 .exe 后缀的 key
+      const nameNoExe = name.replace(/\.exe$/i, '');
+      const b642 = iconCache[nameNoExe];
+      if (b642) {
+        return `<img src="data:image/png;base64,${b642}" class="process-icon-img" alt="${escapeHtml(name)}" />`;
+      }
+      return `<span class="process-icon">
+        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </span>`;
+    }
+
+    async function fetchProcessList() {
+      try {
+        const resp = await window.nachoApi.process.list({ sortBy: processSortBy, limit: 50 });
+        if (resp && resp.payload && resp.payload.success) {
+          processData = resp.payload.data || [];
+          renderProcessTable(processData);
+        }
+      } catch (e) {
+        console.error('[进程] 获取失败:', e);
+      }
+    }
+
+    function renderProcessTable(processes) {
+      const tbody = document.querySelector('.process-table tbody');
+      if (!tbody) return;
+      if (processes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">暂无数据</td></tr>';
+        return;
+      }
+      tbody.innerHTML = processes.map(p => `
+        <tr data-pid="${p.pid}">
+          <td>
+            <div class="process-name">
+              ${getProcessIconHtml(p.name)}
+              ${escapeHtml(p.name)}
+            </div>
+          </td>
+          <td>${p.pid}</td>
+          <td class="process-memory">${formatBytes(p.memory * 1024)}</td>
+          <td style="text-align:right;">
+            <button class="kill-btn" onclick="killProcess(${p.pid})" title="结束进程">✕</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function killProcess(pid) {
+      if (!confirm(`确定要结束 PID=${pid} 的进程吗？`)) return;
+      try {
+        const resp = await window.nachoApi.process.kill(pid);
+        if (resp && resp.payload && resp.payload.success) {
+          console.log('[进程] 已结束 PID:', pid);
+          await fetchProcessList();
+        } else {
+          alert('结束进程失败: ' + (resp?.payload?.message || '未知错误'));
+        }
+      } catch (e) {
+        alert('结束进程异常: ' + e.message);
+      }
+    }
+
+    // 进程排序按钮
+    document.querySelectorAll('.panel-btn').forEach(btn => {
+      if (btn.textContent.includes('排序')) {
+        btn.addEventListener('click', () => {
+          const sorts = ['memory', 'name', 'pid'];
+          const idx = sorts.indexOf(processSortBy);
+          processSortBy = sorts[(idx + 1) % sorts.length];
+          const labels = { memory: '内存', name: '名称', pid: 'PID' };
+          btn.textContent = '排序: ' + labels[processSortBy];
+          fetchProcessList();
+        });
+      }
+    });
+
+    // ========== 端口列表 ==========
+    let portData = [];
+
+    async function fetchPortList() {
+      try {
+        const resp = await window.nachoApi.process.listPorts();
+        if (resp && resp.payload && resp.payload.success) {
+          portData = resp.payload.data || [];
+          renderPortTable(portData);
+        }
+      } catch (e) {
+        console.error('[端口] 获取失败:', e);
+      }
+    }
+
+    function renderPortTable(ports) {
+      const tbody = document.querySelector('.port-table tbody');
+      if (!tbody) return;
+      if (ports.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">暂无数据</td></tr>';
+        return;
+      }
+      // 只显示 TCP 端口，过滤掉 LISTENING 之外的常见状态
+      const displayPorts = ports.filter(p => p.protocol === 'TCP').slice(0, 50);
+      tbody.innerHTML = displayPorts.map(p => `
+        <tr>
+          <td><span class="port-num">${escapeHtml(p.localAddress)}:${p.port}</span></td>
+          <td class="port-proto">${p.protocol}</td>
+          <td class="port-process">${escapeHtml(p.state)}</td>
+          <td style="color:var(--text-muted);font-size:10px;">${p.pid}</td>
+          <td style="text-align:right;">
+            <button class="kill-btn" onclick="killPort(${p.port})" title="结束端口">✕</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function killPort(port) {
+      if (!confirm(`确定要关闭端口 ${port} 吗？`)) return;
+      try {
+        const resp = await window.nachoApi.process.killPort(port);
+        if (resp && resp.payload && resp.payload.success) {
+          console.log('[端口] 已关闭:', port);
+          await fetchPortList();
+        } else {
+          alert('关闭端口失败: ' + (resp?.payload?.message || '未知错误'));
+        }
+      } catch (e) {
+        alert('关闭端口异常: ' + e.message);
+      }
+    }
+
+    // 端口刷新按钮
+    document.querySelectorAll('.panel-btn').forEach(btn => {
+      if (btn.textContent.includes('刷新') && btn.closest('.panel').querySelector('.port-table')) {
+        btn.addEventListener('click', fetchPortList);
+      }
+    });
+
+    // 初始化进程和端口列表
+    fetchProcessList();
+    fetchPortList();
+    fetchProcessIcons();
+    fetchEnvVars('user');
+    setInterval(fetchProcessList, 5000);
+    setInterval(fetchPortList, 5000);
+    setInterval(fetchProcessIcons, 60000); // 每分钟刷新一次图标缓存
+
+    // ========== 环境变量 ==========
+    let currentEnvScope = 'user';
+    let envData = { user: {}, system: {} };
+
+    async function fetchEnvVars(scope) {
+      try {
+        const resp = await window.nachoApi.process.listEnvVars();
+        if (resp && resp.payload && resp.payload.success) {
+          envData = resp.payload.data || { user: {}, system: {} };
+          renderEnvVars(currentEnvScope);
+        }
+      } catch (e) {
+        console.error('[环境变量] 获取失败:', e);
+      }
+    }
+
+    function renderEnvVars(scope) {
+      const list = document.getElementById('env-list');
+      if (!list) return;
+      const vars = envData[scope] || {};
+      const entries = Object.entries(vars).sort((a, b) => a[0].localeCompare(b[0]));
+      if (entries.length === 0) {
+        list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:8px;">暂无数据</div>';
+        return;
+      }
+      list.innerHTML = entries.map(([key, val]) => `
+        <div class="env-item">
+          <span class="env-key">${escapeHtml(key)}</span>
+          <span class="env-value" title="${escapeHtml(String(val))}">${escapeHtml(String(val))}</span>
+        </div>
+      `).join('');
+    }
+
+    // 环境变量切换按钮
+    document.querySelectorAll('.env-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.env-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentEnvScope = btn.dataset.scope || 'user';
+        renderEnvVars(currentEnvScope);
+      });
+    });
 
     // ========== 终端交互 ==========
     let currentShell = 'powershell';
@@ -1884,6 +2177,184 @@
 
     // 延迟初始化终端，等 DOM 加载完成
     setTimeout(initTerminal, 1000);
+
+    // ========== AI 对话 ==========
+    const chatMessages = document.querySelector('.ai-chat-messages');
+    const chatInput = document.getElementById('chat-message-input');
+    const chatSendBtn = document.querySelector('.chat-send-btn');
+    const aiStatus = document.getElementById('ai-status');
+    const aiSettingsBtn = document.getElementById('ai-settings-btn');
+    const aiSettingsPanel = document.getElementById('ai-settings-panel');
+    const aiSaveSettingsBtn = document.getElementById('ai-save-settings-btn');
+
+    let isChatLoading = false;
+
+    // AI 设置面板
+    aiSettingsBtn?.addEventListener('click', () => {
+      aiSettingsPanel.style.display = aiSettingsPanel.style.display === 'none' ? 'block' : 'none';
+    });
+
+    aiSaveSettingsBtn?.addEventListener('click', async () => {
+      const apiKey = document.getElementById('ai-apikey-input').value.trim();
+      const baseUrl = document.getElementById('ai-baseurl-input').value.trim();
+      const model = document.getElementById('ai-model-input').value.trim();
+      const enableToolCalls = document.getElementById('ai-toolcalls-check').checked;
+      try {
+        await window.nachoApi.agent.setConfig({ apiKey, baseUrl, model, enableToolCalls });
+        if (apiKey) {
+          aiStatus.textContent = 'API 已配置';
+          aiStatus.style.color = 'var(--terminal-green)';
+        } else {
+          aiStatus.textContent = '雫在这里聆听你的指令';
+          aiStatus.style.color = 'var(--text-muted)';
+        }
+        aiSettingsPanel.style.display = 'none';
+      } catch (e) {
+        alert('设置保存失败: ' + (e && e.message ? e.message : String(e)));
+      }
+    });
+
+    const aiTestBtn = document.getElementById('ai-test-btn');
+    const aiTestResult = document.getElementById('ai-test-result');
+    aiTestBtn?.addEventListener('click', async () => {
+      const apiKey = document.getElementById('ai-apikey-input').value.trim();
+      const baseUrl = document.getElementById('ai-baseurl-input').value.trim();
+      const model = document.getElementById('ai-model-input').value.trim();
+      if (!apiKey || !baseUrl || !model) {
+        aiTestResult.textContent = '请填写完整的 API Key、Base URL 和模型';
+        aiTestResult.style.color = 'var(--terminal-red)';
+        return;
+      }
+      aiTestBtn.textContent = '测试中...';
+      aiTestBtn.disabled = true;
+      aiTestResult.textContent = '';
+      try {
+        const resp = await window.nachoApi.agent.testConnection({ apiKey, baseUrl, model });
+        if (resp && resp.payload && resp.payload.success) {
+          aiTestResult.textContent = resp.payload.data.message;
+          aiTestResult.style.color = 'var(--terminal-green)';
+        } else {
+          aiTestResult.textContent = resp.payload?.error?.message || '测试失败';
+          aiTestResult.style.color = 'var(--terminal-red)';
+        }
+      } catch (e) {
+        aiTestResult.textContent = '测试失败: ' + (e && e.message ? e.message : String(e));
+        aiTestResult.style.color = 'var(--terminal-red)';
+      }
+      aiTestBtn.textContent = '测试连接';
+      aiTestBtn.disabled = false;
+    });
+
+    // 注册 AI 事件回调
+    window.nachoApi.agent.onStreaming((text) => {
+      // 流式更新最后一条助手消息
+      const lastMsg = chatMessages.querySelector('.chat-message:last-child .chat-content .text');
+      if (lastMsg) {
+        lastMsg.textContent += text;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+    });
+
+    window.nachoApi.agent.onComplete(() => {
+      isChatLoading = false;
+      chatSendBtn.textContent = '发送';
+      chatSendBtn.disabled = false;
+      chatInput.disabled = false;
+    });
+
+    window.nachoApi.agent.onError((err) => {
+      isChatLoading = false;
+      chatSendBtn.textContent = '发送';
+      chatSendBtn.disabled = false;
+      chatInput.disabled = false;
+      appendChatMessage('shizuku', '错误: ' + err);
+    });
+
+    window.nachoApi.agent.onToolCallStart((toolName) => {
+      const lastMsg = chatMessages.querySelector('.chat-message:last-child .chat-content .text');
+      if (lastMsg) {
+        lastMsg.textContent += `\n🔧 正在执行工具: ${toolName}...`;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+    });
+
+    window.nachoApi.agent.onToolCallComplete(() => {
+      const lastMsg = chatMessages.querySelector('.chat-message:last-child .chat-content .text');
+      if (lastMsg) {
+        lastMsg.textContent += ` ✅`;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+    });
+
+    function appendChatMessage(role, text) {
+      const isUser = role === 'user';
+      const avatar = isUser
+        ? '<div class="chat-avatar user"></div>'
+        : '<div class="chat-avatar"><img src="./assets/images/shizuku.png" alt="shizuku" /></div>';
+      const name = isUser ? '你' : '雫';
+      const nameClass = isUser ? 'user' : 'shizuku';
+
+      const msg = document.createElement('div');
+      msg.className = 'chat-message';
+      msg.innerHTML = `
+        ${avatar}
+        <div class="chat-content">
+          <div class="name ${nameClass}">${escapeHtml(name)}</div>
+          <div class="text">${escapeHtml(text)}</div>
+        </div>
+      `;
+      chatMessages.appendChild(msg);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return msg;
+    }
+
+    async function sendChatMessage() {
+      if (isChatLoading) return;
+      const message = chatInput.value.trim();
+      if (!message) return;
+
+      chatInput.value = '';
+      isChatLoading = true;
+      chatSendBtn.textContent = '...';
+      chatSendBtn.disabled = true;
+
+      // 添加用户消息
+      appendChatMessage('user', message);
+
+      // 添加一条空的助手消息用于流式更新
+      appendChatMessage('shizuku', '');
+
+      try {
+        const resp = await window.nachoApi.agent.chat(message);
+        if (resp && resp.payload && !resp.payload.success) {
+          const lastMsg = chatMessages.querySelector('.chat-message:last-child .chat-content .text');
+          if (lastMsg) lastMsg.textContent = '错误: ' + (resp.payload.error?.message || '未知错误');
+          isChatLoading = false;
+          chatSendBtn.textContent = '发送';
+          chatSendBtn.disabled = false;
+          chatInput.disabled = false;
+        }
+      } catch (e) {
+        appendChatMessage('shizuku', '发送失败: ' + (e && e.message ? e.message : String(e)));
+        isChatLoading = false;
+        chatSendBtn.textContent = '发送';
+        chatSendBtn.disabled = false;
+        chatInput.disabled = false;
+      }
+    }
+
+    if (chatSendBtn) {
+      chatSendBtn.addEventListener('click', sendChatMessage);
+    }
+
+    if (chatInput) {
+      chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendChatMessage();
+        }
+      });
+    }
   </script>
 </body>
 </html>
