@@ -140,6 +140,24 @@ const api = {
       ipcRenderer.on('agent:toolCallComplete', () => callback());
     },
   },
+
+  /**
+   * 设置窗口
+   */
+  settings: {
+    open: () => ipcRenderer.invoke('settings:open'),
+    load: () => ipcRenderer.invoke('settings:load'),
+    save: (settings: Record<string, unknown>) => ipcRenderer.invoke('settings:save', settings),
+  },
+
+  /**
+   * 设置窗口控制 (仅设置窗口内使用)
+   */
+  settingsWindow: {
+    minimize: () => ipcRenderer.invoke('settings:window:minimize'),
+    maximize: () => ipcRenderer.invoke('settings:window:maximize'),
+    close: () => ipcRenderer.invoke('settings:window:close'),
+  },
 };
 
 // ========== 暴露 API ==========

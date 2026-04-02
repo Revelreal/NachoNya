@@ -560,6 +560,80 @@
       color: var(--text-secondary);
     }
 
+    /* Think block - FluentClip style collapsible thinking box */
+    .think-block {
+      background: #FFF8E6;
+      border: 1px solid #E6E6DC;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 6px 0;
+      font-size: 11px;
+      color: #666;
+    }
+
+    .think-block summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: #8B7355;
+      outline: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .think-block summary::before {
+      content: '💭';
+      font-size: 12px;
+    }
+
+    .think-block summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .think-block[open] summary {
+      margin-bottom: 8px;
+      border-bottom: 1px solid #E6E6DC;
+      padding-bottom: 6px;
+    }
+
+    .think-block .think-content {
+      padding-left: 18px;
+      line-height: 1.5;
+    }
+
+    /* Tool call status badge - FluentClip style */
+    .tool-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #FFFDF5;
+      border: 1px solid #E6DDBB;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 10px;
+      color: #8B7355;
+      margin: 4px 0;
+    }
+
+    .tool-status .tool-icon {
+      font-size: 12px;
+    }
+
+    .tool-status.running {
+      border-color: #FFD93D;
+      background: #FFFEF5;
+    }
+
+    .tool-status.running .tool-icon {
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
     .chat-input-area {
       display: flex;
       align-items: center;
@@ -945,6 +1019,34 @@
       background: rgba(248, 113, 113, 0.15);
     }
 
+    /* 斑马纹 */
+    .process-table tbody tr:nth-child(odd) {
+      background: rgba(255, 154, 158, 0.03);
+    }
+    .process-table tbody tr:hover {
+      background: rgba(255, 154, 158, 0.08);
+    }
+
+    /* 搜索输入框 */
+    .panel-search-input {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 8px;
+      color: var(--text-primary);
+      font-size: 10px;
+      outline: none;
+      width: 80px;
+      transition: var(--transition);
+    }
+    .panel-search-input:focus {
+      border-color: var(--accent-pink);
+      width: 120px;
+    }
+    .panel-search-input::placeholder {
+      color: var(--text-muted);
+    }
+
     .process-icon-img {
       width: 18px;
       height: 18px;
@@ -1174,11 +1276,12 @@
         NachoNya!
       </div>
       <div class="titlebar-menu">
-        <div class="menu-item active">仪表盘</div>
-        <div class="menu-item">进程</div>
-        <div class="menu-item">端口</div>
-        <div class="menu-item">环境变量</div>
-        <div class="menu-item">工具</div>
+        <div class="menu-item active" id="nav-dashboard">仪表盘</div>
+        <div class="menu-item" id="nav-process">进程</div>
+        <div class="menu-item" id="nav-port">端口</div>
+        <div class="menu-item" id="nav-env">环境变量</div>
+        <div class="menu-item" id="nav-tools">工具</div>
+        <div class="menu-item" id="menu-settings" onclick="if(window.nachoApi && window.nachoApi.settings) window.nachoApi.settings.open()">设置</div>
       </div>
       <div class="titlebar-right">
         <div class="cat-avatar-small"><img src="./assets/images/shizuku.png" alt="shizuku" /></div>
@@ -1193,24 +1296,24 @@
 
     <!-- Activity Bar -->
     <div class="activity-bar">
-      <div class="activity-icon active">
+      <div class="activity-icon active" id="sidebar-dashboard" onclick="alert('仪表盘')">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       </div>
-      <div class="activity-icon">
+      <div class="activity-icon" id="sidebar-process" onclick="alert('进程管理')">
         <svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/></svg>
       </div>
-      <div class="activity-icon">
+      <div class="activity-icon" id="sidebar-port" onclick="alert('端口监控')">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
       </div>
-      <div class="activity-icon">
+      <div class="activity-icon" id="sidebar-settings" onclick="if(window.nachoApi && window.nachoApi.settings) window.nachoApi.settings.open()">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </div>
-      <div class="activity-icon">
+      <div class="activity-icon" id="sidebar-tools" onclick="alert('工具箱')">
         <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
       </div>
       <div class="activity-spacer"></div>
-      <div class="activity-icon">
-        <svg viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect x="8" y="8" width="8" height="8" rx="1"/><path d="M12 8a4 4 0 0 0 4 4"/><path d="M12 8a4 4 0 0 1-4 4"/><path d="M12 16v4"/><path d="M8 16h8"/></svg>
+      <div class="activity-icon" id="sidebar-settings-btn" onclick="if(window.nachoApi && window.nachoApi.settings) window.nachoApi.settings.open()" title="设置">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </div>
       <div class="activity-icon"><img src="./assets/images/shizuku.png" alt="shizuku" style="width:20px;height:20px;border-radius:50%;object-fit:cover;" /></div>
     </div>
@@ -1260,24 +1363,31 @@
               <div style="font-size:13px;font-weight:600;">AI 对话</div>
               <div style="font-size:10px;color:var(--text-muted);" id="ai-status">雫在这里聆听你的指令</div>
             </div>
-            <button id="ai-settings-btn" title="AI 设置" style="margin-left:auto;background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:14px;padding:4px 6px;border-radius:4px;">
+            <button id="ai-settings-btn" title="打开设置" style="margin-left:auto;background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:14px;padding:4px 6px;border-radius:4px;">
               ⚙️
             </button>
           </div>
+          <!-- 简化版内嵌设置（保留快捷访问） -->
           <div id="ai-settings-panel" style="display:none;padding:10px 12px;background:var(--bg-input);border-bottom:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <span style="font-size:11px;color:var(--text-muted);">快速配置</span>
+              <button id="ai-open-settings-btn" style="padding:4px 10px;background:linear-gradient(135deg,var(--accent-pink),var(--accent-pink-light));border:none;border-radius:4px;color:#0a0a0a;font-size:11px;font-weight:500;cursor:pointer;">
+                打开设置窗口 →
+              </button>
+            </div>
             <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">API Key</div>
             <input type="password" id="ai-apikey-input" placeholder="输入 MiniMax API Key..." style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:11px;outline:none;" />
             <div style="font-size:11px;color:var(--text-muted);margin:8px 0 6px;">Base URL</div>
-            <input type="text" id="ai-baseurl-input" value="https://api.minimax.chat/v" placeholder="https://api.minimax.chat/v" style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:11px;outline:none;" />
+            <input type="text" id="ai-baseurl-input" value="https://api.minimaxi.com/v1" placeholder="https://api.minimaxi.com/v1" style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:11px;outline:none;" />
             <div style="font-size:11px;color:var(--text-muted);margin:8px 0 6px;">模型</div>
-            <input type="text" id="ai-model-input" placeholder="MiniMax-Text-01" style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:11px;outline:none;" />
+            <input type="text" id="ai-model-input" value="MiniMax-M2.7" placeholder="MiniMax-M2.7" style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:11px;outline:none;" />
             <div style="display:flex;align-items:center;gap:6px;margin-top:8px;">
               <input type="checkbox" id="ai-toolcalls-check" checked />
               <label for="ai-toolcalls-check" style="font-size:11px;color:var(--text-secondary);">启用工具调用</label>
             </div>
             <div style="display:flex;gap:6px;margin-top:8px;">
               <button id="ai-test-btn" style="flex:1;padding:6px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-secondary);font-size:11px;cursor:pointer;">测试连接</button>
-              <button id="ai-save-settings-btn" style="flex:2;padding:6px;background:linear-gradient(135deg,var(--accent-pink),var(--accent-pink-light));border:none;border-radius:6px;color:#0a0a0a;font-size:11px;font-weight:600;cursor:pointer;">保存设置</button>
+              <button id="ai-save-settings-btn" style="flex:2;padding:6px;background:linear-gradient(135deg,var(--accent-pink),var(--accent-pink-light));border:none;border-radius:6px;color:#0a0a0a;font-size:11px;font-weight:600;cursor:pointer;">保存</button>
             </div>
             <div id="ai-test-result" style="margin-top:6px;font-size:11px;text-align:center;"></div>
           </div>
@@ -1394,7 +1504,7 @@
       <!-- Bottom Row -->
       <div class="bottom-row">
         <!-- Process List -->
-        <div class="panel">
+        <div class="panel" id="process-panel">
           <div class="panel-header">
             <span class="panel-title">
               <span class="icon">
@@ -1402,7 +1512,8 @@
               </span> 进程
             </span>
             <div class="panel-actions">
-              <button class="panel-btn">排序</button>
+              <input type="text" id="process-search-input" class="panel-search-input" placeholder="搜索进程..." />
+              <button class="panel-btn" id="process-sort-btn">排序</button>
             </div>
           </div>
           <div class="panel-body" style="padding:6px;">
@@ -1590,6 +1701,10 @@
       <div class="statusbar-item"><svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg> 已连接 · 100Mbps</div>
       <div class="statusbar-item"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg> C:68GB D:820GB</div>
       <div class="statusbar-right">
+        <div class="statusbar-item" id="open-settings-btn" style="cursor:pointer;" title="打开设置">
+          <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;stroke-width:2;fill:none;margin-right:4px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          设置
+        </div>
         <div class="statusbar-item">中文</div>
         <div class="statusbar-item"><span class="time">15:30</span></div>
       </div>
@@ -1611,6 +1726,47 @@
       const div = document.createElement('div');
       div.textContent = String(str);
       return div.innerHTML;
+    }
+
+    // 简单的 markdown 解析（处理 think 标签，处理基本格式）
+    function parseMarkdown(text) {
+      if (!text) return '';
+      // Convert think tags to think blocks (FluentClip style)
+      let result = text.replace(/<think>([\s\S]*?)\[\/lang\]/gi, (_, content) => {
+        return `<details class="think-block"><summary>思考中...</summary><div class="think-content">${escapeHtml(content.trim())}</div></details>`;
+      });
+      result = result.replace(/<think>([\s\S]*?)<\/think>/gi, (_, content) => {
+        return `<details class="think-block"><summary>思考中...</summary><div class="think-content">${escapeHtml(content.trim())}</div></details>`;
+      });
+      // 转义 HTML (but preserve our think block HTML)
+      // First protect think blocks
+      const thinkBlocks = [];
+      result = result.replace(/<details class="think-block">[\s\S]*?<\/details>/g, (match) => {
+        thinkBlocks.push(match);
+        return `__THINK_BLOCK_${thinkBlocks.length - 1}__`;
+      });
+      result = escapeHtml(result);
+      // Restore think blocks
+      thinkBlocks.forEach((block, i) => {
+        result = result.replace(`__THINK_BLOCK_${i}__`, block);
+      });
+      // 处理粗体 **text**
+      result = result.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      // 处理斜体 *text*
+      result = result.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      // 处理行内代码 `code`
+      result = result.replace(/`(.*?)`/g, '<code>$1</code>');
+      // 处理代码块 ```code```
+      result = result.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+      // 处理换行
+      result = result.replace(/\n/g, '<br>');
+      return result;
+    }
+
+    // 纯文本版本（用于 streaming 更新）
+    function stripMarkdown(text) {
+      if (!text) return '';
+      return text.replace(/<think>[\s\S]*?\[\/lang\]/gi, '').replace(/<think>[\s\S]*?<\/think>/gi, '');
     }
 
     function updateTideBar(id, percent, barClass) {
@@ -1749,6 +1905,7 @@
 
     // ========== 进程列表 ==========
     let processSortBy = 'memory';
+    let processSearchTerm = '';
     let processData = [];
     const iconCache = {};
 
@@ -1787,7 +1944,7 @@
 
     async function fetchProcessList() {
       try {
-        const resp = await window.nachoApi.process.list({ sortBy: processSortBy, limit: 50 });
+        const resp = await window.nachoApi.process.list({ sortBy: processSortBy, limit: 100 });
         if (resp && resp.payload && resp.payload.success) {
           processData = resp.payload.data || [];
           renderProcessTable(processData);
@@ -1800,11 +1957,22 @@
     function renderProcessTable(processes) {
       const tbody = document.querySelector('.process-table tbody');
       if (!tbody) return;
-      if (processes.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">暂无数据</td></tr>';
+
+      // 应用搜索过滤
+      let filtered = processes;
+      if (processSearchTerm) {
+        const term = processSearchTerm.toLowerCase();
+        filtered = processes.filter(p =>
+          p.name.toLowerCase().includes(term) ||
+          String(p.pid).includes(term)
+        );
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">${processSearchTerm ? '未找到匹配的进程' : '暂无数据'}</td></tr>`;
         return;
       }
-      tbody.innerHTML = processes.map(p => `
+      tbody.innerHTML = filtered.map(p => `
         <tr data-pid="${p.pid}">
           <td>
             <div class="process-name">
@@ -1837,18 +2005,26 @@
     }
 
     // 进程排序按钮
-    document.querySelectorAll('.panel-btn').forEach(btn => {
-      if (btn.textContent.includes('排序')) {
-        btn.addEventListener('click', () => {
-          const sorts = ['memory', 'name', 'pid'];
-          const idx = sorts.indexOf(processSortBy);
-          processSortBy = sorts[(idx + 1) % sorts.length];
-          const labels = { memory: '内存', name: '名称', pid: 'PID' };
-          btn.textContent = '排序: ' + labels[processSortBy];
-          fetchProcessList();
-        });
-      }
-    });
+    const processSortBtn = document.getElementById('process-sort-btn');
+    if (processSortBtn) {
+      processSortBtn.addEventListener('click', () => {
+        const sorts = ['memory', 'name', 'pid'];
+        const idx = sorts.indexOf(processSortBy);
+        processSortBy = sorts[(idx + 1) % sorts.length];
+        const labels = { memory: '内存', name: '名称', pid: 'PID' };
+        processSortBtn.textContent = '排序:' + labels[processSortBy];
+        fetchProcessList();
+      });
+    }
+
+    // 进程搜索输入
+    const processSearchInput = document.getElementById('process-search-input');
+    if (processSearchInput) {
+      processSearchInput.addEventListener('input', (e) => {
+        processSearchTerm = e.target.value.trim();
+        renderProcessTable(processData);
+      });
+    }
 
     // ========== 端口列表 ==========
     let portData = [];
@@ -2068,13 +2244,23 @@
       if (!output) return;
 
       const text = String(data);
+      // 先把 \r 处理为换行（处理 PowerShell 补全回车）
+      const normalized = text.replace(/\r\n?/g, '\n');
       // 按行分割
-      const lines = text.split(/\r?\n/);
+      const lines = normalized.split('\n');
 
       for (const lineText of lines) {
-        // 跳过只有转义序列的空行
-        const cleanLine = lineText.replace(/\x1b(\[[0-9;]*m|\][0-9];[^\x07\x1b]*(?:\x07|\x1b\\)|[()][AB012]|[>=]?)/g, '').trim();
-        if (!cleanLine && !lineText.match(/\x1b/)) {
+        // 更完整地过滤 ANSI 转义序列
+        const cleanLine = lineText
+          .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, '')  // OSC sequences
+          .replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '')        // CSI sequences (including ?)
+          .replace(/\x1b[()][AB012]/g, '')                 // ESC sequences
+          .replace(/\x1b[>=]/g, '')                        // ESC >= sequences
+          .replace(/\x1b\]0;/g, '')                        // OSC title
+          .replace(/\x07/g, '')                             // Bell
+          .trim();
+
+        if (!cleanLine) {
           // 如果是完全空的行，创建一个空白行
           const emptyLine = document.createElement('div');
           emptyLine.className = 'terminal-line';
@@ -2085,7 +2271,7 @@
 
         const line = document.createElement('div');
         line.className = 'terminal-line';
-        line.appendChild(renderAnsiText(lineText));
+        line.appendChild(renderAnsiText(cleanLine));
         output.appendChild(line);
       }
 
@@ -2194,12 +2380,26 @@
       aiSettingsPanel.style.display = aiSettingsPanel.style.display === 'none' ? 'block' : 'none';
     });
 
+    // 打开独立设置窗口
+    document.getElementById('ai-open-settings-btn')?.addEventListener('click', () => {
+      window.nachoApi.settings.open();
+      aiSettingsPanel.style.display = 'none';
+    });
+
+    // 状态栏设置按钮
+    document.getElementById('open-settings-btn')?.addEventListener('click', () => {
+      window.nachoApi.settings.open();
+    });
+
+    // 顶部菜单设置选项
     aiSaveSettingsBtn?.addEventListener('click', async () => {
       const apiKey = document.getElementById('ai-apikey-input').value.trim();
       const baseUrl = document.getElementById('ai-baseurl-input').value.trim();
       const model = document.getElementById('ai-model-input').value.trim();
       const enableToolCalls = document.getElementById('ai-toolcalls-check').checked;
       try {
+        // 保存到 store 并更新 agentService
+        await window.nachoApi.settings.save({ apiKey, baseUrl, model, enableToolCalls });
         await window.nachoApi.agent.setConfig({ apiKey, baseUrl, model, enableToolCalls });
         if (apiKey) {
           aiStatus.textContent = 'API 已配置';
@@ -2246,12 +2446,47 @@
     });
 
     // 注册 AI 事件回调
+    let lastStreamingTime = 0;
+    let currentThinkBlock = null; // Track active think block
+
     window.nachoApi.agent.onStreaming((text) => {
-      // 流式更新最后一条助手消息
       const lastMsg = chatMessages.querySelector('.chat-message:last-child .chat-content .text');
-      if (lastMsg) {
-        lastMsg.textContent += text;
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+      if (!lastMsg) return;
+
+      // Check for think tags and render as think block (FluentClip style)
+      const thinkMatch = text.match(/<think>([\s\S]*?)\[\/lang\]/i) || text.match(/<think>([\s\S]*?)<\/think>/i);
+      if (thinkMatch) {
+        // Extract think content
+        const thinkContent = thinkMatch[1].trim();
+        if (!currentThinkBlock) {
+          currentThinkBlock = document.createElement('details');
+          currentThinkBlock.className = 'think-block';
+          currentThinkBlock.innerHTML = `<summary>思考中...</summary><div class="think-content"></div>`;
+          lastMsg.appendChild(currentThinkBlock);
+        }
+        const thinkContentDiv = currentThinkBlock.querySelector('.think-content');
+        if (thinkContentDiv) {
+          thinkContentDiv.textContent += thinkContent;
+        }
+      } else {
+        // Close think block if open and we get non-think content
+        if (currentThinkBlock) {
+          currentThinkBlock.open = false;
+          currentThinkBlock = null;
+        }
+        // Regular text - escape and append
+        const escaped = escapeHtml(text);
+        lastMsg.innerHTML += escaped;
+      }
+
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      // Throttled status update (avoid too frequent)
+      const now = Date.now();
+      if (now - lastStreamingTime > 500 && aiStatus) {
+        aiStatus.textContent = '✨ 正在生成回复...';
+        aiStatus.style.color = 'var(--accent-pink-light)';
+        lastStreamingTime = now;
       }
     });
 
@@ -2260,6 +2495,22 @@
       chatSendBtn.textContent = '发送';
       chatSendBtn.disabled = false;
       chatInput.disabled = false;
+      // Close any open think block
+      if (currentThinkBlock) {
+        currentThinkBlock.open = false;
+        currentThinkBlock = null;
+      }
+      // Preserve think blocks - innerHTML already has proper structure from streaming
+      const lastMsg = chatMessages.querySelector('.chat-message:last-child .chat-content .text');
+      if (lastMsg) {
+        // Just close the think block; structure is already correct
+        lastMsg.innerHTML = lastMsg.innerHTML;
+      }
+      // 更新状态
+      if (aiStatus) {
+        aiStatus.textContent = '雫在这里聆听你的指令';
+        aiStatus.style.color = 'var(--text-muted)';
+      }
     });
 
     window.nachoApi.agent.onError((err) => {
@@ -2271,17 +2522,38 @@
     });
 
     window.nachoApi.agent.onToolCallStart((toolName) => {
+      // 更新状态
+      if (aiStatus) {
+        aiStatus.textContent = `🔧 执行工具: ${toolName}`;
+        aiStatus.style.color = 'var(--terminal-yellow)';
+      }
       const lastMsg = chatMessages.querySelector('.chat-message:last-child .chat-content .text');
       if (lastMsg) {
-        lastMsg.textContent += `\n🔧 正在执行工具: ${toolName}...`;
+        // FluentClip-style tool status badge
+        const toolStatus = document.createElement('div');
+        toolStatus.className = 'tool-status running';
+        toolStatus.innerHTML = `<span class="tool-icon">🔧</span> 执行工具: ${toolName}...`;
+        lastMsg.appendChild(toolStatus);
         chatMessages.scrollTop = chatMessages.scrollHeight;
       }
     });
 
     window.nachoApi.agent.onToolCallComplete(() => {
+      // 更新状态
+      if (aiStatus) {
+        aiStatus.textContent = '✨ 处理完成';
+        aiStatus.style.color = 'var(--terminal-green)';
+      }
+      // Update tool status badge to show completion
       const lastMsg = chatMessages.querySelector('.chat-message:last-child .chat-content .text');
       if (lastMsg) {
-        lastMsg.textContent += ` ✅`;
+        const runningBadge = lastMsg.querySelector('.tool-status.running');
+        if (runningBadge) {
+          runningBadge.classList.remove('running');
+          runningBadge.innerHTML = `<span class="tool-icon">✅</span> 工具执行完成`;
+        } else {
+          lastMsg.innerHTML += ` ✅`;
+        }
         chatMessages.scrollTop = chatMessages.scrollHeight;
       }
     });
@@ -2317,6 +2589,11 @@
       isChatLoading = true;
       chatSendBtn.textContent = '...';
       chatSendBtn.disabled = true;
+      // 更新状态为思考中
+      if (aiStatus) {
+        aiStatus.textContent = '雫正在思考...';
+        aiStatus.style.color = 'var(--accent-pink)';
+      }
 
       // 添加用户消息
       appendChatMessage('user', message);

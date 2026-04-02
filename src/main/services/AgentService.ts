@@ -43,8 +43,8 @@ export interface AgentConfig {
 
 const DEFAULT_CONFIG: AgentConfig = {
   apiKey: '',
-  baseUrl: 'https://api.minimax.chat/v',
-  model: 'MiniMax-Text-01',
+  baseUrl: 'https://api.minimaxi.com/v1',
+  model: 'MiniMax-M2.5',
   personaPrompt: '你是猫羽雫，一个可爱活泼的 AI 电脑管家。你能用温柔的语气回答用户的问题，帮助管理Windows系统。',
   systemPrompt: '你可以帮助用户执行系统管理任务，包括查看进程、管理端口、读取文件、执行命令等。',
   enableToolCalls: true,
@@ -149,24 +149,25 @@ class AgentService implements IService {
       return { success: false, error: { code: 'A0003', message: '模型名称不能为空' }, requestId: '' };
     }
 
-    // 构造一个极简的测试请求
-    const url = `${baseUrl}/text/chatcompletion_v2?GroupId=${apiKey}`;
+    // MiniMax API 使用 Bearer token 和正确的 endpoint
+    const endpoint = '/chat/completions';
     const postData = JSON.stringify({
       model,
-      tokens_to_generate: 4,
-      temperature: 0.8,
       messages: [{ role: 'user', content: 'Hi' }],
     });
 
     return new Promise((resolve) => {
       try {
         const parsedUrl = new URL(baseUrl);
+        const fullPath = parsedUrl.pathname === '/' ? endpoint : `${parsedUrl.pathname}${endpoint}`;
         const options = {
           hostname: parsedUrl.hostname,
-          path: `/text/chatcompletion_v2?GroupId=${apiKey}`,
+          path: fullPath,
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'MM-API-Source': 'Minimax-MCP',
             'Content-Length': Buffer.byteLength(postData).toString(),
           },
           timeout: 10000,
@@ -250,16 +251,25 @@ class AgentService implements IService {
     messages: ChatMessage[],
     tools?: unknown[]
   ): Promise<string> {
-    const url = `${this.config.baseUrl}/text/chatcompletion_v2?GroupId=${this.config.apiKey}`;
+    // MiniMax API endpoint
+    const endpoint = '/chat/completions';
 
     const requestBody = {
       model: this.config.model,
-      tokens_to_generate: 1024,
+      max_tokens: 1024,
       temperature: 0.8,
-      messages: messages.map(m => ({
-        role: m.role,
-        content: m.content,
-      })),
+      stream: true,
+      messages: messages.map(m => {
+        const msg: Record<string, unknown> = { role: m.role, content: m.content };
+        // MiniMax API 需要 snake_case
+        if (m.role === 'tool' && m.toolCallId) {
+          msg['tool_call_id'] = m.toolCallId;
+        }
+        if (m.toolCalls) {
+          msg['tool_calls'] = m.toolCalls;
+        }
+        return msg;
+      }),
       ...(tools && tools.length > 0 ? { tools, tool_choice: 'auto' } : {}),
     };
 
@@ -268,18 +278,16 @@ class AgentService implements IService {
     return new Promise((resolve, reject) => {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.config.apiKey}`,
+        'MM-API-Source': 'Minimax-MCP',
         'Content-Length': Buffer.byteLength(postData).toString(),
       };
 
-      // 根据 baseUrl 判断是否需要 Authorization
-      if (!this.config.baseUrl.includes('api.minimax')) {
-        headers['Authorization'] = `Bearer ${this.config.apiKey}`;
-      }
-
       const parsedUrl = new URL(this.config.baseUrl);
+      const fullPath = parsedUrl.pathname === '/' ? endpoint : `${parsedUrl.pathname}${endpoint}`;
       const options = {
         hostname: parsedUrl.hostname,
-        path: `/text/chatcompletion_v2?GroupId=${this.config.apiKey}`,
+        path: fullPath,
         method: 'POST',
         headers,
       };

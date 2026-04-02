@@ -7,12 +7,15 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import { exec } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
 import * as path from 'path';
+import Store from 'electron-store';
 
 import { serviceManager } from './core/ServiceManager';
 import { systemInfoService } from './services/SystemInfoService';
 import { processService } from './services/ProcessService';
 import { terminalService } from './services/TerminalService';
 import { agentService } from './services/AgentService';
+import { fileService } from './services/FileService';
+import { mcpClient } from './services/McpClient';
 import { logger } from './utils/Logger';
 import { IpcMessage, IpcResponse } from '../shared/interfaces/ipc/message.interface';
 
@@ -36,6 +39,44 @@ process.on('unhandledRejection', (reason) => {
 // ========== 窗口管理 ==========
 
 let mainWindow: BrowserWindow | null = null;
+let settingsWindow: BrowserWindow | null = null;
+
+function createSettingsWindow(): void {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.focus();
+    return;
+  }
+
+  settingsWindow = new BrowserWindow({
+    width: 900,
+    height: 650,
+    minWidth: 700,
+    minHeight: 500,
+    frame: false,
+    backgroundColor: '#0a0a0a',
+    parent: mainWindow || undefined,
+    modal: false,
+    webPreferences: {
+      preload: getAppPath('dist/preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+    },
+  });
+
+  // 加载设置页面
+  if (process.env.NODE_ENV === 'development') {
+    settingsWindow.loadURL('http://localhost:5173/src/renderer/settings.html');
+  } else {
+    settingsWindow.loadFile('./dist/renderer/settings.html');
+  }
+
+  settingsWindow.on('closed', () => {
+    settingsWindow = null;
+  });
+
+  logger.info('[Main] Settings window created');
+}
 
 function createWindow(): void {
   const preloadPath = getAppPath('dist/preload/index.js');
@@ -206,7 +247,87 @@ function setupIpcHandlers(): void {
   });
 
   logger.info('[Main] IPC handlers registered');
+
+  // Settings 窗口控制
+  ipcMain.handle('settings:open', () => {
+    createSettingsWindow();
+  });
+
+  ipcMain.handle('settings:load', (): Settings => {
+    const settings = store.store;
+    // 同时更新 agentService
+    if (settings.apiKey) {
+      agentService.setConfig({
+        apiKey: settings.apiKey,
+        baseUrl: settings.baseUrl || 'https://api.minimaxi.com/v1',
+        model: settings.model || 'MiniMax-M2.5',
+        enableToolCalls: settings.enableToolCalls ?? true,
+        enableShellExecution: false,
+      });
+      logger.info('[Main] Settings loaded to AgentService');
+    }
+    return settings;
+  });
+
+  ipcMain.handle('settings:save', (_event, settings: Partial<Settings>) => {
+    for (const [key, value] of Object.entries(settings)) {
+      store.set(key, value);
+    }
+    // 同时更新 agentService
+    if (settings.apiKey !== undefined || settings.baseUrl || settings.model) {
+      const currentConfig = agentService.getConfig();
+      agentService.setConfig({
+        apiKey: settings.apiKey ?? currentConfig.apiKey,
+        baseUrl: settings.baseUrl ?? currentConfig.baseUrl,
+        model: settings.model ?? currentConfig.model,
+        enableToolCalls: settings.enableToolCalls ?? currentConfig.enableToolCalls,
+        enableShellExecution: currentConfig.enableShellExecution,
+      });
+      logger.info('[Main] Settings saved to store and AgentService');
+    }
+    return { success: true };
+  });
+
+  // Settings 窗口控制 (通过 IPC 发送给 settings 窗口)
+  ipcMain.handle('settings:window:minimize', () => {
+    settingsWindow?.minimize();
+  });
+
+  ipcMain.handle('settings:window:maximize', () => {
+    if (settingsWindow?.isMaximized()) {
+      settingsWindow.unmaximize();
+    } else {
+      settingsWindow?.maximize();
+    }
+  });
+
+  ipcMain.handle('settings:window:close', () => {
+    settingsWindow?.close();
+  });
 }
+
+// ========== Settings Store ==========
+
+interface Settings {
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  enableToolCalls: boolean;
+  enableTTS: boolean;
+  enableStreaming: boolean;
+  [key: string]: unknown;
+}
+
+const store = new Store<Settings>({
+  defaults: {
+    apiKey: '',
+    baseUrl: 'https://api.minimaxi.com/v1',
+    model: 'MiniMax-M2.7',
+    enableToolCalls: true,
+    enableTTS: true,
+    enableStreaming: true,
+  },
+});
 
 // ========== 服务注册 ==========
 
@@ -222,6 +343,25 @@ function registerServices(): void {
 
   // 注册 AI 对话服务
   serviceManager.register(agentService);
+
+  // 加载保存的设置并应用到 AgentService
+  const savedSettings = store.store;
+  if (savedSettings.apiKey) {
+    agentService.setConfig({
+      apiKey: savedSettings.apiKey,
+      baseUrl: savedSettings.baseUrl || 'https://api.minimaxi.com/v1',
+      model: savedSettings.model || 'MiniMax-M2.5',
+      enableToolCalls: savedSettings.enableToolCalls ?? true,
+      enableShellExecution: false,
+    });
+    logger.info('[Main] Loaded saved settings for AgentService');
+  }
+
+  // 注册文件管理服务
+  serviceManager.register(fileService);
+
+  // 注册 MCP 客户端服务
+  serviceManager.register(mcpClient);
 
   logger.info('[Main] All services registered');
 }

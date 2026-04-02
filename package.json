@@ -23,6 +23,7 @@
     "@types/uuid": "^10.0.0",
     "electron": "^31.1.0",
     "electron-builder": "^24.13.3",
+    "electron-packager": "^17.1.2",
     "rcedit": "^5.0.2",
     "typescript": "^5.5.2"
   },
@@ -41,7 +42,8 @@
             "x64"
           ]
         }
-      ]
+      ],
+      "sign": false
     }
   }
 }

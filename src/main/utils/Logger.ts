@@ -1,7 +1,11 @@
 /**
  * 结构化日志系统
- * 车规级追溯支持
+ * 支持文件输出，方便调试
  */
+
+import * as fs from 'fs';
+import * as path from 'path';
+import { app } from 'electron';
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
 
@@ -21,18 +25,45 @@ class Logger {
   private static instance: Logger;
   private logs: LogEntry[] = [];
   private readonly maxLogs = 10000;
+  private logFilePath: string = '';
 
   private constructor() {}
 
   static getInstance(): Logger {
     if (!Logger.instance) {
       Logger.instance = new Logger();
+      Logger.instance.initLogFile();
     }
     return Logger.instance;
   }
 
+  private initLogFile(): void {
+    try {
+      const userDataPath = app?.getPath?.('userData') || '.';
+      const logDir = path.join(userDataPath, 'logs');
+      if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
+      }
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      this.logFilePath = path.join(logDir, `nachonya-${timestamp}.log`);
+      this.info('Log file initialized', { path: this.logFilePath });
+    } catch (e) {
+      console.error('Failed to init log file:', e);
+    }
+  }
+
   private formatTimestamp(): string {
     return new Date().toISOString();
+  }
+
+  private writeToFile(text: string): void {
+    if (this.logFilePath) {
+      try {
+        fs.appendFileSync(this.logFilePath, text + '\n');
+      } catch (e) {
+        console.error('Failed to write log:', e);
+      }
+    }
   }
 
   private log(entry: Omit<LogEntry, 'timestamp'>): void {
@@ -52,7 +83,9 @@ class Logger {
       ? `[${fullEntry.requestId}]${fullEntry.service ? `[${fullEntry.service}]` : ''}`
       : '';
 
-    console.log(`${prefix} ${context} ${fullEntry.message}`, fullEntry.data || '');
+    const logText = `${prefix} ${context} ${fullEntry.message}`;
+    console.log(logText, fullEntry.data || '');
+    this.writeToFile(logText + (fullEntry.data ? ` ${JSON.stringify(fullEntry.data)}` : ''));
   }
 
   debug(message: string, data?: unknown): void {
@@ -96,6 +129,10 @@ class Logger {
 
   clear(): void {
     this.logs = [];
+  }
+
+  getLogFilePath(): string {
+    return this.logFilePath;
   }
 }
 
